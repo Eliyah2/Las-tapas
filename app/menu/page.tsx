@@ -1,18 +1,78 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { MENU } from "@/lib/menu";
 import { formatPrice } from "@/lib/format";
+import { Divider, Rosette } from "@/components/decor";
+import type { GerechtStatus } from "@/lib/voorraad-types";
 
 type CartLine = { id: string; name: string; price: number; quantity: number };
+
+/** Klein lijn-icoon per menucategorie. */
+function CategoryIcon({ id }: { id: string }) {
+  const props = {
+    className: "category-icon",
+    width: 26,
+    height: 26,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.6,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+
+  if (id === "tapas") {
+    // Pincho: klein bordje met een prikker.
+    return (
+      <svg {...props}>
+        <circle cx="12" cy="13.5" r="6.5" />
+        <path d="M12 7V3" />
+        <circle cx="12" cy="2.6" r="0.4" />
+      </svg>
+    );
+  }
+
+  if (id === "hoofdgerechten") {
+    // Paellapan met twee oren.
+    return (
+      <svg {...props}>
+        <circle cx="12" cy="12.5" r="6.5" />
+        <path d="M2.5 12.5h3M18.5 12.5h3" />
+        <path d="M6.5 9.5h11" />
+      </svg>
+    );
+  }
+
+  if (id === "desserts") {
+    // Churros.
+    return (
+      <svg {...props}>
+        <path d="M5.5 19.5L15 10" />
+        <path d="M10 20.5L18.5 12" />
+      </svg>
+    );
+  }
+
+  // Wijnglas voor de dranken.
+  return (
+    <svg {...props}>
+      <path d="M8.5 3h7l-.7 4.6a3.3 3.3 0 0 1-5.6 0z" />
+      <path d="M12 11.5V19" />
+      <path d="M9 20h6" />
+    </svg>
+  );
+}
 
 export default function MenuPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-dvh items-center justify-center text-neutral-400">
-          Menu laden…
+        <main className="success-page">
+          <p className="eyebrow">Las Tapas</p>
+          <p className="brand-serif">Menu laden…</p>
         </main>
       }
     >
@@ -23,13 +83,55 @@ export default function MenuPage() {
 
 function MenuInner() {
   const searchParams = useSearchParams();
-  const table = searchParams.get("tafel") ?? "—";
+  const table = searchParams.get("tafel") ?? "-";
 
   const [cart, setCart] = useState<Record<string, CartLine>>({});
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
   const [placed, setPlaced] = useState<{ table: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [beschikbaar, setBeschikbaar] = useState<Record<
+    string,
+    GerechtStatus
+  > | null>(null);
+
+  // Wat er nog in huis is, en dat live bijhouden: zodra de keuken bijvult,
+  // verdwijnt het label "uitverkocht" vanzelf.
+  useEffect(() => {
+    let actief = true;
+
+    fetch("/api/voorraad/beschikbaar", { cache: "no-store" })
+      .then((antwoord) => antwoord.json())
+      .then((data: { status?: Record<string, GerechtStatus> }) => {
+        if (actief && data.status) setBeschikbaar(data.status);
+      })
+      .catch(() => {
+        // Geen voorraadinformatie? Dan tonen we gewoon de hele kaart.
+      });
+
+    const bron = new EventSource("/api/voorraad/stream");
+    bron.addEventListener("voorraad", (event) => {
+      const data = JSON.parse((event as MessageEvent).data) as {
+        status?: Record<string, GerechtStatus>;
+      };
+      if (data.status) setBeschikbaar(data.status);
+    });
+
+    return () => {
+      actief = false;
+      bron.close();
+    };
+  }, []);
+
+  const uitverkocht = useMemo(() => {
+    return MENU.flatMap((category) => category.items)
+      .filter((item) => {
+        if (!item.available) return true;
+        const status = beschikbaar?.[item.id];
+        return status ? !status.maakbaar : false;
+      })
+      .map((item) => item.name);
+  }, [beschikbaar]);
 
   const cartLines = useMemo(() => Object.values(cart), [cart]);
   const total = useMemo(
@@ -78,7 +180,17 @@ function MenuInner() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Bestellen mislukt, probeer het opnieuw.");
+        // De keuken kon de bestelling niet maken: laat zien waaraan het schort.
+        const tekorten = Array.isArray(data.tekorten)
+          ? (data.tekorten as { name: string }[])
+              .map((tekort) => tekort.name)
+              .join(", ")
+          : "";
+        setError(
+          `${data.error ?? "Bestellen mislukt, probeer het opnieuw."}${
+            tekorten ? ` Tekort aan: ${tekorten}.` : ""
+          }`
+        );
         return;
       }
       setCart({});
@@ -93,60 +205,105 @@ function MenuInner() {
 
   if (placed) {
     return (
-      <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-4 p-6 text-center">
-        <div className="text-5xl">✅</div>
-        <h1 className="text-2xl font-bold">Bestelling ontvangen!</h1>
-        <p className="text-neutral-600">
-          Tafel {placed.table} — de keuken is op de hoogte. Eet smakelijk!
-        </p>
-        <button
-          onClick={() => setPlaced(null)}
-          className="mt-4 rounded-full bg-red-600 px-6 py-3 font-semibold text-white active:scale-95"
-        >
-          Nog iets bestellen
-        </button>
+      <main className="success-page">
+        <div className="success-card">
+          <Rosette size={84} />
+          <p className="eyebrow">¡Gracias!</p>
+          <h1>Bestelling ontvangen!</h1>
+          <p>Tafel {placed.table}: de keuken is op de hoogte. Eet smakelijk!</p>
+          <button
+            onClick={() => setPlaced(null)}
+            className="button mt-6"
+          >
+            Nog iets bestellen
+          </button>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto max-w-md pb-32">
-      <header className="sticky top-0 z-10 bg-red-700 px-5 py-4 text-white shadow-md">
-        <p className="text-xs uppercase tracking-widest opacity-80">Las Tapas</p>
-        <h1 className="text-xl font-bold">Menukaart · Tafel {table}</h1>
+    <main className="menu-page">
+      <header className="menu-header">
+        <div className="menu-header-inner">
+          <div className="menu-brand-row">
+            <span className="menu-brand-mark" aria-hidden="true">L</span>
+            <div>
+              <p className="menu-brand-name">Las Tapas</p>
+              <p className="menu-header-caption">Cocina española</p>
+            </div>
+          </div>
+          <span className="table-pill">Tafel {table}</span>
+        </div>
       </header>
 
+      <div className="menu-content">
+        <div className="menu-welcome">
+          <div>
+            <p className="eyebrow">Pequeños platos</p>
+            <h1>Deel de avond</h1>
+            <Divider />
+          </div>
+          <p>Bestel meerdere kleine gerechten voor de tafel. Wij brengen ze vers uit de keuken.</p>
+        </div>
+
+        {uitverkocht.length > 0 && (
+          <p className="menu-uitverkocht-melding">
+            Vandaag even niet beschikbaar: {uitverkocht.join(", ")}.
+          </p>
+        )}
+
       {MENU.map((category) => (
-        <section key={category.id} className="px-4 pt-6">
-          <h2 className="mb-3 text-lg font-bold text-red-700">{category.name}</h2>
-          <ul className="flex flex-col gap-2">
+        <section key={category.id} className="menu-section">
+          <h2 className="category-heading">
+            <CategoryIcon id={category.id} />
+            {category.name}
+          </h2>
+          <ul className="menu-list">
             {category.items.map((item) => {
               const inCart = cart[item.id]?.quantity ?? 0;
+              const status = beschikbaar?.[item.id];
+              const isUitverkocht =
+                !item.available || (status ? !status.maakbaar : false);
+              const bijnaOp =
+                !isUitverkocht && status ? status.porties <= 3 : false;
               return (
                 <li
                   key={item.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white p-3"
+                  className={`menu-item${isUitverkocht ? " uitverkocht" : ""}`}
                 >
-                  <div className="min-w-0">
-                    <p className="font-semibold">{item.name}</p>
-                    <p className="text-sm text-neutral-500">{item.description}</p>
-                    <p className="mt-1 font-medium text-red-700">
+                  <div className="menu-item-copy">
+                    <p className="menu-item-name">
+                      {item.name}
+                      {isUitverkocht && (
+                        <span className="menu-item-vlag">Uitverkocht</span>
+                      )}
+                      {bijnaOp && status && (
+                        <span className="menu-item-vlag zacht">
+                          Nog {status.porties}
+                        </span>
+                      )}
+                    </p>
+                    <p className="menu-item-description">{item.description}</p>
+                    <p className="menu-item-price">
                       {formatPrice(item.price)}
                     </p>
                   </div>
-                  {inCart > 0 ? (
-                    <div className="flex shrink-0 items-center gap-2">
+                  {isUitverkocht ? (
+                    <p className="menu-item-uit">Vandaag op</p>
+                  ) : inCart > 0 ? (
+                    <div className="quantity-control">
                       <button
                         onClick={() => remove(item.id)}
-                        className="h-8 w-8 rounded-full border border-red-600 font-bold text-red-600"
+                        className="quantity-button remove"
                         aria-label={`Eén ${item.name} minder`}
                       >
                         −
                       </button>
-                      <span className="w-4 text-center font-bold">{inCart}</span>
+                      <span className="quantity-number">{inCart}</span>
                       <button
                         onClick={() => add(item.id, item.name, item.price)}
-                        className="h-8 w-8 rounded-full bg-red-600 font-bold text-white"
+                        className="quantity-button"
                         aria-label={`Nog een ${item.name}`}
                       >
                         +
@@ -155,7 +312,7 @@ function MenuInner() {
                   ) : (
                     <button
                       onClick={() => add(item.id, item.name, item.price)}
-                      className="shrink-0 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white active:scale-95"
+                      className="add-button"
                     >
                       + Toevoegen
                     </button>
@@ -166,19 +323,20 @@ function MenuInner() {
           </ul>
         </section>
       ))}
+      </div>
 
       {/* Winkelmand-balk */}
-      <div className="fixed inset-x-0 bottom-0 border-t border-neutral-200 bg-white p-4 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
-        <div className="mx-auto max-w-md">
+      <div className="cart-bar">
+        <div className="cart-inner">
           {count === 0 ? (
-            <p className="text-center text-sm text-neutral-400">
+            <p className="cart-empty">
               Tik op een gerecht om te bestellen
             </p>
           ) : (
             <>
-              <ul className="mb-2 max-h-32 space-y-1 overflow-y-auto text-sm">
+              <ul className="cart-list">
                 {cartLines.map((line) => (
-                  <li key={line.id} className="flex justify-between">
+                  <li key={line.id}>
                     <span>
                       {line.quantity}× {line.name}
                     </span>
@@ -190,16 +348,16 @@ function MenuInner() {
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="Opmerking voor de keuken (optioneel)"
-                className="mb-2 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                className="order-input"
               />
               <button
                 onClick={placeOrder}
                 disabled={sending}
-                className="w-full rounded-full bg-red-600 py-3 font-bold text-white disabled:opacity-60"
+                className="order-button"
               >
                 {sending ? "Versturen…" : `Bestellen · ${formatPrice(total)}`}
               </button>
-              {error && <p className="mt-2 text-center text-sm text-red-600">{error}</p>}
+              {error && <p className="order-error">{error}</p>}
             </>
           )}
         </div>

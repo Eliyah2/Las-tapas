@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { formatPrice } from "@/lib/format";
 
 type OrderItem = { id: string; name: string; price: number; quantity: number };
@@ -24,6 +25,8 @@ const COLUMNS: { status: Order["status"]; title: string; color: string }[] = [
 export default function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [connected, setConnected] = useState(false);
+  const [now, setNow] = useState(0);
+  const [onderPar, setOnderPar] = useState(0);
 
   useEffect(() => {
     const es = new EventSource("/api/orders/stream");
@@ -32,7 +35,28 @@ export default function KitchenPage() {
       setOrders(JSON.parse((event as MessageEvent).data) as Order[]);
     });
     es.addEventListener("error", () => setConnected(false));
-    return () => es.close();
+    // Hoeveel producten er bijbesteld moeten worden, apart opgehaald zodat het
+    // keukenscherm niet afhankelijk is van de voorraadstroom.
+    const haalVoorraad = () => {
+      fetch("/api/voorraad/beschikbaar", { cache: "no-store" })
+        .then((antwoord) => antwoord.json())
+        .then((data: { samenvatting?: { onderPar?: number } }) =>
+          setOnderPar(data.samenvatting?.onderPar ?? 0)
+        )
+        .catch(() => setOnderPar(0));
+    };
+    haalVoorraad();
+    const voorraadKlok = window.setInterval(haalVoorraad, 60_000);
+
+    const clock = window.setInterval(() => setNow(Date.now()), 60_000);
+    // Eerste meting pas ná de render, zodat React geen extra render krijgt.
+    const firstTick = window.setTimeout(() => setNow(Date.now()), 0);
+    return () => {
+      window.clearInterval(clock);
+      window.clearInterval(voorraadKlok);
+      window.clearTimeout(firstTick);
+      es.close();
+    };
   }, []);
 
   async function setStatus(id: string, status: Order["status"]) {
@@ -45,60 +69,69 @@ export default function KitchenPage() {
   }
 
   function timeAgo(ts: number) {
-    const minutes = Math.floor((Date.now() - ts) / 60_000);
+    const minutes = now === 0 ? 0 : Math.floor((now - ts) / 60_000);
     if (minutes < 1) return "net binnen";
     if (minutes === 1) return "1 min";
     return `${minutes} min`;
   }
 
   return (
-    <main className="min-h-dvh bg-neutral-950 p-4 text-white">
-      <header className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Keuken · Las Tapas</h1>
-        <span
-          className={`flex items-center gap-2 rounded-full px-3 py-1 text-sm ${
-            connected ? "bg-green-900 text-green-300" : "bg-red-900 text-red-300"
-          }`}
-        >
-          <span
-            className={`h-2 w-2 rounded-full ${
-              connected ? "animate-pulse bg-green-400" : "bg-red-400"
-            }`}
-          />
-          {connected ? "Live" : "Verbinding verbroken…"}
-        </span>
+    <main className="kitchen-page">
+      <header className="kitchen-header">
+        <div className="kitchen-title">
+          <span className="menu-brand-mark" aria-hidden="true">L</span>
+          <div>
+            <p>Las Tapas · pase de cocina</p>
+            <h1>Bestellingen</h1>
+          </div>
+        </div>
+        <div className="kitchen-header-rechts">
+          <Link href="/uitgifte" className="mini-button ghost">
+            Pakken
+          </Link>
+          <Link href="/voorraad" className="mini-button ghost">
+            Voorraad
+            {onderPar > 0 && (
+              <span className="kitchen-voorraad-teller">{onderPar}</span>
+            )}
+          </Link>
+          <span className="connection-pill">
+            <span className={`connection-dot ${connected ? "live" : "offline"}`} />
+            {connected ? "Live verbonden" : "Verbinding verbroken…"}
+          </span>
+        </div>
       </header>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="kitchen-grid">
         {COLUMNS.map((col) => {
           const columnOrders = orders.filter((o) => o.status === col.status);
           return (
             <section
               key={col.status}
-              className={`rounded-xl border-t-4 ${col.color} bg-neutral-900 p-3`}
+              className={`kitchen-column ${col.status === "bereiden" ? "preparing" : ""} ${col.status === "klaar" ? "ready" : ""}`}
             >
-              <h2 className="mb-3 flex items-center justify-between text-lg font-bold">
+              <h2 className="kitchen-column-heading">
                 {col.title}
-                <span className="rounded-full bg-neutral-800 px-2 text-sm text-neutral-300">
+                <span className="kitchen-count">
                   {columnOrders.length}
                 </span>
               </h2>
-              <div className="flex flex-col gap-3">
+              <div className="kitchen-orders">
                 {columnOrders.length === 0 && (
-                  <p className="text-sm text-neutral-500">Geen bestellingen</p>
+                  <p className="kitchen-empty">Geen bestellingen</p>
                 )}
                 {columnOrders.map((order) => (
                   <article
                     key={order.id}
-                    className="rounded-lg bg-neutral-800 p-3 text-sm"
+                    className="order-card"
                   >
-                    <div className="mb-2 flex items-center justify-between">
-                      <p className="text-lg font-bold">Tafel {order.table}</p>
-                      <span className="text-xs text-neutral-400">
+                    <div className="order-card-top">
+                      <p className="order-table">Tafel {order.table}</p>
+                      <span className="order-time">
                         {timeAgo(order.createdAt)}
                       </span>
                     </div>
-                    <ul className="mb-2 space-y-1">
+                    <ul className="order-items">
                       {order.items.map((item) => (
                         <li key={item.id}>
                           <span className="font-bold">{item.quantity}×</span>{" "}
@@ -107,15 +140,13 @@ export default function KitchenPage() {
                       ))}
                     </ul>
                     {order.note && (
-                      <p className="mb-2 rounded bg-amber-900/50 p-2 text-amber-200">
-                        💬 {order.note}
-                      </p>
+                      <p className="order-note">✦ {order.note}</p>
                     )}
-                    <div className="flex gap-2">
+                    <div>
                       {order.status === "nieuw" && (
                         <button
                           onClick={() => setStatus(order.id, "bereiden")}
-                          className="flex-1 rounded-md bg-amber-500 py-2 font-semibold text-neutral-950 active:scale-95"
+                          className="order-status-button start"
                         >
                           Start bereiding
                         </button>
@@ -123,7 +154,7 @@ export default function KitchenPage() {
                       {order.status === "bereiden" && (
                         <button
                           onClick={() => setStatus(order.id, "klaar")}
-                          className="flex-1 rounded-md bg-green-600 py-2 font-semibold text-white active:scale-95"
+                          className="order-status-button done"
                         >
                           Gereed
                         </button>
@@ -131,7 +162,7 @@ export default function KitchenPage() {
                       {order.status === "klaar" && (
                         <button
                           onClick={() => setStatus(order.id, "nieuw")}
-                          className="flex-1 rounded-md bg-neutral-700 py-2 font-semibold text-neutral-300"
+                          className="order-status-button reset"
                         >
                           Reset (server opruimen)
                         </button>
@@ -145,7 +176,7 @@ export default function KitchenPage() {
         })}
       </div>
 
-      <footer className="mt-6 text-right text-sm text-neutral-500">
+      <footer className="kitchen-footer">
         Totaal vandaag: {orders.length} bestellingen ·{" "}
         {formatPrice(
           orders.reduce(

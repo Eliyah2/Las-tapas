@@ -1,8 +1,32 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   Las Tapas · huisstijl
+   Warme Spaanse tapassfeer met de kleuren van de vlag: zwart en wit als basis,
+   rojo (#b81d24) en amarillo (#f0b429) als accenten. Knoppen zijn zwart met
+   witte tekst. Sfeer komt uit fotografie, tegelmotieven en warme typografie.
+   ========================================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --negro: #17110f;
+  --carbon: #241b18;
+  --blanco: #fffdf9;
+  --crema: #f8f1e6;
+  --crema-diep: #efe2d0;
+  --rojo: #b81d24;
+  --rojo-oscuro: #8c1219;
+  --amarillo: #f0b429;
+  --amarillo-licht: #f8dda0;
+  --oliva: #6b7a45;
+  --gris: #7d6d61;
+  --linea: rgba(23, 17, 15, 0.12);
+  --schaduw: 0 22px 45px -30px rgba(23, 17, 15, 0.5);
+
+  --background: var(--blanco);
+  --foreground: var(--negro);
+
+  --font-display-stack: var(--font-display), Georgia, "Times New Roman", serif;
+  --font-accent-stack: var(--font-accent), "Segoe Script", "Brush Script MT", cursive;
 }
 
 @theme inline {
@@ -12,15 +36,2290 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--blanco);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-width: 320px;
+  background-color: var(--blanco);
+  /* Warme gloed op de achtergrond, net als lamplicht in een tasca. */
+  background-image:
+    radial-gradient(circle at 8% 4%, rgba(184, 29, 36, 0.07), transparent 26rem),
+    radial-gradient(circle at 95% 12%, rgba(240, 180, 41, 0.12), transparent 24rem);
+  background-repeat: no-repeat;
+  color: var(--negro);
+  font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+::selection {
+  background: var(--amarillo-licht);
+  color: var(--negro);
+}
+
+/* Warme menukaart-serif voor koppen, geen schreeuwerige posters. */
+h1,
+h2,
+h3,
+.brand-serif {
+  font-family: var(--font-display-stack);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.08;
+  color: var(--negro);
+}
+
+a,
+button,
+input {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a {
+  transition: color 180ms ease, background-color 180ms ease,
+    border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+button:active,
+a:active {
+  transform: scale(0.99);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--amarillo);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Terugkerende elementen
+   ========================================================================== */
+
+/* Handgeschreven accentregel, zoals met krijt op een schoolbord. */
+.eyebrow {
+  display: inline-block;
+  color: var(--rojo);
+  font-family: var(--font-accent-stack);
+  font-size: 1.15rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+/* Logo: rond tegelstuk met het monogram. */
+.brand-mark {
+  display: inline-grid;
+  width: 2.7rem;
+  height: 2.7rem;
+  place-items: center;
+  border: 1px solid var(--amarillo);
+  border-radius: 50%;
+  background: var(--rojo);
+  color: var(--blanco);
+  font-family: var(--font-display-stack);
+  font-size: 1.3rem;
+  font-weight: 700;
+  box-shadow: 0 0 0 4px rgba(240, 180, 41, 0.18);
+}
+
+/* Scheidingslijn met tegelruitje. */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1.15rem 0;
+}
+
+.divider-line {
+  height: 1px;
+  flex: 1;
+  max-width: 4.5rem;
+  background: linear-gradient(to right, transparent, var(--linea), transparent);
+}
+
+.divider-diamond {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: none;
+  transform: rotate(45deg);
+  border: 1px solid var(--rojo);
+  background: var(--amarillo);
+}
+
+/* Tegelstrook als decoratieve band. */
+.tile-band {
+  position: relative;
+  height: 3.75rem;
+  overflow: hidden;
+  border-top: 1px solid var(--linea);
+  border-bottom: 1px solid var(--linea);
+  background: var(--crema);
+}
+
+.azulejo {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Knoppen: zwart met witte tekst, afgeronde hoeken en zachte schaduw. */
+.button,
+.add-button,
+.order-button,
+.welcome-button,
+.qr-download {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid var(--negro);
+  border-radius: 0.65rem;
+  padding: 0.8rem 1.25rem;
+  background: var(--negro);
+  color: var(--blanco);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 12px 22px -14px rgba(23, 17, 15, 0.75);
+  cursor: pointer;
+}
+
+.button:hover,
+.add-button:hover,
+.order-button:hover,
+.welcome-button:hover,
+.qr-download:hover {
+  border-color: var(--rojo-oscuro);
+  background: var(--rojo);
+}
+
+.button:disabled,
+.order-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+/* ==========================================================================
+   Home
+   ========================================================================== */
+
+.home-page {
+  --page-pad: 1.25rem;
+  position: relative;
+  /* Eigen stapelcontext, zodat de fotolaag achter de inhoud blijft. */
+  isolation: isolate;
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  padding: var(--page-pad) var(--page-pad) 0;
+}
+
+.home-nav {
+  display: flex;
+  width: min(1120px, 100%);
+  margin-right: auto;
+  margin-left: auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--linea);
+}
+
+.home-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.home-brand-name {
+  color: var(--negro);
+  font-family: var(--font-display-stack);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.home-brand-subtitle {
+  margin-top: 0.1rem;
+  color: var(--gris);
+  font-family: var(--font-accent-stack);
+  font-size: 0.95rem;
+}
+
+.home-nav-note {
+  color: var(--gris);
+  font-family: var(--font-accent-stack);
+  font-size: 1.05rem;
+}
+
+/* De tapasfoto staat als vaste laag over de hele pagina, met een warme
+   donkere sluier erover zodat alle tekst erboven leesbaar blijft. */
+.page-photo,
+.page-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.page-photo {
+  background-position: center;
+  background-size: cover;
+}
+
+.page-overlay {
+  background:
+    radial-gradient(circle at 88% 88%, rgba(140, 18, 25, 0.55), transparent 55%),
+    radial-gradient(circle at 8% 4%, rgba(240, 180, 41, 0.16), transparent 45%),
+    linear-gradient(
+      160deg,
+      rgba(23, 17, 15, 0.87) 0%,
+      rgba(28, 21, 18, 0.8) 50%,
+      rgba(23, 17, 15, 0.9) 100%
+    );
+}
+
+.home-hero {
+  padding: clamp(2.25rem, 7vh, 4rem) 0 clamp(2rem, 6vh, 3rem);
+  color: var(--blanco);
+}
+
+.home-hero-inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+  align-items: center;
+  gap: clamp(2rem, 6vw, 5rem);
+  width: min(1120px, 100%);
+  margin: 0 auto;
+}
+
+/* Omdat de foto achter alles zit, is de tekst op de homepagina licht. */
+.home-page h1,
+.home-page .home-brand-name {
+  color: var(--blanco);
+}
+
+.home-page .eyebrow {
+  color: var(--amarillo);
+}
+
+.home-page .home-brand-subtitle,
+.home-page .home-nav-note {
+  color: rgba(255, 253, 249, 0.72);
+}
+
+.home-page .home-nav {
+  border-bottom-color: rgba(255, 253, 249, 0.18);
+}
+
+.home-page .home-copy-intro {
+  color: rgba(255, 253, 249, 0.86);
+}
+
+.home-page .home-detail {
+  color: rgba(255, 253, 249, 0.7);
+}
+
+.home-page .divider-line {
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 253, 249, 0.4),
+    transparent
+  );
+}
+
+/* De actiekaart is licht, dus daarop juist de rode accentkleur. */
+.home-page .home-actions .eyebrow {
+  color: var(--rojo);
+}
+
+.home-copy {
+  max-width: 540px;
+}
+
+.home-copy h1 {
+  margin: 0.6rem 0 0;
+  font-size: clamp(2.4rem, 6vw, 4.1rem);
+  font-weight: 700;
+}
+
+.home-copy h1 em {
+  color: var(--rojo);
+  font-style: italic;
+}
+
+.home-copy .divider {
+  justify-content: flex-start;
+  margin: 1.4rem 0;
+}
+
+.home-copy-intro {
+  max-width: 440px;
+  color: #55483f;
+  font-size: 1.02rem;
+  line-height: 1.75;
+}
+
+.home-detail {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 1.5rem;
+  color: var(--gris);
+  font-size: 0.8rem;
+}
+
+.home-detail-line {
+  width: 2.25rem;
+  height: 2px;
+  background: var(--amarillo);
+}
+
+.home-actions {
+  color: var(--negro);
+  padding: 1.6rem;
+  border: 1px solid var(--linea);
+  border-radius: 1.4rem;
+  background: rgba(255, 253, 249, 0.9);
+  box-shadow: var(--schaduw);
+  backdrop-filter: blur(8px);
+}
+
+.home-actions-heading {
+  margin: 0.35rem 0 1.1rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.home-action {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 4.5rem;
+  margin-top: 0.7rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--linea);
+  border-radius: 0.85rem;
+  background: var(--blanco);
+  color: var(--negro);
+  text-decoration: none;
+}
+
+.home-action:hover {
+  border-color: var(--rojo);
+  background: var(--rojo);
+  color: var(--blanco);
+  transform: translateX(4px);
+}
+
+.home-action-icon {
+  display: grid;
+  flex: 0 0 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border-radius: 0.6rem;
+  background: var(--crema-diep);
+  color: var(--rojo);
+  font-size: 1.05rem;
+}
+
+.home-action:hover .home-action-icon {
+  background: var(--amarillo);
+  color: var(--negro);
+}
+
+.home-action-copy {
+  flex: 1;
+}
+
+.home-action-title {
+  display: block;
+  font-family: var(--font-display-stack);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.home-action-description {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--gris);
+  font-size: 0.82rem;
+}
+
+.home-action:hover .home-action-description {
+  color: rgba(255, 253, 249, 0.8);
+}
+
+.home-action-arrow {
+  color: var(--rojo);
+  font-size: 1.1rem;
+}
+
+.home-action:hover .home-action-arrow {
+  color: var(--amarillo);
+}
+
+/* Korte sfeertekst onder de hero. */
+.home-note {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 2.5rem 0;
+}
+
+.home-note-text {
+  max-width: 46rem;
+  color: rgba(255, 253, 249, 0.85);
+  font-size: 0.95rem;
+  line-height: 1.75;
+}
+
+.home-note .eyebrow {
+  display: block;
+}
+
+/* De tegelband krijgt een donkere variant, zodat hij bij de foto past. */
+.home-page > .tile-band {
+  --rojo: rgba(255, 253, 249, 0.5);
+  margin: auto calc(-1 * var(--page-pad)) 0;
+  border-color: rgba(255, 253, 249, 0.16);
+  background: rgba(23, 17, 15, 0.45);
+}
+
+/* ==========================================================================
+   Menukaart (klant)
+   ========================================================================== */
+
+.menu-page {
+  position: relative;
+  min-height: 100dvh;
+  padding-bottom: 13rem;
+  background: var(--blanco);
+}
+
+.menu-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 3px solid var(--amarillo);
+  background: var(--rojo-oscuro);
+  color: var(--blanco);
+  box-shadow: 0 14px 30px -22px rgba(23, 17, 15, 0.9);
+}
+
+.menu-header-inner,
+.menu-content,
+.cart-inner {
+  width: min(780px, 100%);
+  margin: 0 auto;
+}
+
+.menu-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.95rem 1.25rem;
+}
+
+.menu-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.menu-brand-mark {
+  display: grid;
+  width: 2.4rem;
+  height: 2.4rem;
+  place-items: center;
+  border: 1px solid var(--amarillo);
+  border-radius: 50%;
+  background: rgba(255, 253, 249, 0.12);
+  color: var(--amarillo);
+  font-family: var(--font-display-stack);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.menu-brand-name {
+  font-family: var(--font-display-stack);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.menu-header-caption {
+  color: rgba(255, 253, 249, 0.72);
+  font-family: var(--font-accent-stack);
+  font-size: 0.95rem;
+}
+
+.table-pill {
+  border: 1px solid rgba(255, 253, 249, 0.35);
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  color: var(--amarillo-licht);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.menu-content {
+  padding: 2rem 1.25rem;
+}
+
+.menu-welcome {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--linea);
+}
+
+.menu-welcome h1 {
+  margin-top: 0.3rem;
+  font-size: clamp(2rem, 6vw, 3rem);
+  font-weight: 700;
+}
+
+.menu-welcome p:last-child {
+  max-width: 19rem;
+  color: var(--gris);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  text-align: right;
+}
+
+.menu-section {
+  margin-top: 2.25rem;
+}
+
+.category-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.9rem;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.category-icon {
+  flex: none;
+  color: var(--rojo);
+}
+
+.category-heading::after {
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(to right, var(--linea), transparent);
+  content: "";
+}
+
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--linea);
+  border-radius: 0.9rem;
+  background: var(--blanco);
+  box-shadow: 0 10px 25px -24px rgba(23, 17, 15, 0.7);
+}
+
+.menu-item:hover {
+  border-color: rgba(184, 29, 36, 0.45);
+  box-shadow: var(--schaduw);
+}
+
+.menu-item-copy {
+  min-width: 0;
+}
+
+.menu-item-name {
+  color: var(--negro);
+  font-family: var(--font-display-stack);
+  font-size: 1.12rem;
+  font-weight: 600;
+}
+
+.menu-item-description {
+  margin-top: 0.2rem;
+  color: var(--gris);
+  font-size: 0.83rem;
+  line-height: 1.55;
+}
+
+.menu-item-price {
+  margin-top: 0.5rem;
+  color: var(--rojo);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+/* Gerechten waarvan de voorraad op is. */
+.menu-item.uitverkocht {
+  border-style: dashed;
+  background: var(--crema);
+}
+
+.menu-item.uitverkocht .menu-item-name,
+.menu-item.uitverkocht .menu-item-price {
+  color: var(--gris);
+}
+
+.menu-item-vlag {
+  margin-left: 0.5rem;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  background: rgba(184, 29, 36, 0.12);
+  color: var(--rojo);
+  font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.menu-item-vlag.zacht {
+  background: rgba(240, 180, 41, 0.2);
+  color: #8a6208;
+}
+
+.menu-item-uit {
+  flex-shrink: 0;
+  color: var(--gris);
+  font-family: var(--font-accent-stack);
+  font-size: 1.05rem;
+}
+
+.menu-uitverkocht-melding {
+  margin-top: 1.1rem;
+  padding: 0.7rem 0.95rem;
+  border-left: 3px solid var(--rojo);
+  border-radius: 0 0.6rem 0.6rem 0;
+  background: rgba(184, 29, 36, 0.07);
+  color: #6f4a44;
+  font-size: 0.85rem;
+}
+
+.add-button {
+  flex-shrink: 0;
+  padding: 0.6rem 0.95rem;
+  font-size: 0.78rem;
+}
+
+.quantity-control {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quantity-button {
+  display: grid;
+  width: 2.1rem;
+  height: 2.1rem;
+  place-items: center;
+  border: 1px solid var(--negro);
+  border-radius: 0.6rem;
+  background: var(--negro);
+  color: var(--blanco);
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+
+.quantity-button:hover {
+  border-color: var(--rojo-oscuro);
+  background: var(--rojo);
+}
+
+.quantity-button.remove {
+  background: var(--blanco);
+  color: var(--negro);
+}
+
+.quantity-button.remove:hover {
+  border-color: var(--amarillo);
+  background: var(--crema-diep);
+  color: var(--negro);
+}
+
+.quantity-number {
+  width: 1.2rem;
+  color: var(--negro);
+  text-align: center;
+  font-weight: 700;
+}
+
+.cart-bar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  border-top: 2px solid var(--amarillo);
+  background: rgba(255, 253, 249, 0.97);
+  box-shadow: 0 -16px 35px -28px rgba(23, 17, 15, 0.8);
+  backdrop-filter: blur(12px);
+}
+
+.cart-inner {
+  padding: 0.9rem 1.25rem 1rem;
+}
+
+.cart-empty {
+  color: var(--gris);
+  font-family: var(--font-accent-stack);
+  font-size: 1.05rem;
+  text-align: center;
+}
+
+.cart-list {
+  max-height: 5.2rem;
+  margin: 0 0 0.7rem;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  color: #55483f;
+  font-size: 0.8rem;
+}
+
+.cart-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.14rem 0;
+}
+
+.order-input,
+.qr-input {
+  width: 100%;
+  border: 1px solid var(--linea);
+  border-radius: 0.65rem;
+  background: var(--blanco);
+  color: var(--negro);
+  outline: none;
+}
+
+.order-input:focus,
+.qr-input:focus {
+  border-color: var(--rojo);
+  box-shadow: 0 0 0 3px rgba(184, 29, 36, 0.14);
+}
+
+.order-input {
+  margin-bottom: 0.65rem;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.8rem;
+}
+
+.order-button {
+  width: 100%;
+}
+
+.order-error {
+  margin-top: 0.5rem;
+  color: var(--rojo);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ==========================================================================
+   Bevestiging
+   ========================================================================== */
+
+.success-page {
+  display: flex;
+  min-height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.success-card {
+  width: min(440px, 100%);
+  padding: 2.5rem 1.6rem;
+  border: 1px solid var(--linea);
+  border-radius: 1.4rem;
+  background: var(--blanco);
+  box-shadow: var(--schaduw);
+  text-align: center;
+}
+
+.success-card .divider {
+  justify-content: center;
+}
+
+.success-card h1 {
+  margin-top: 0.4rem;
+  font-size: 1.9rem;
+  font-weight: 700;
+}
+
+.success-card p {
+  margin-top: 0.6rem;
+  color: var(--gris);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+/* ==========================================================================
+   Welkomstpagina (QR-scan)
+   ========================================================================== */
+
+.welcome-page {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 2.5rem 1.5rem;
+  background: var(--carbon);
+  text-align: center;
+}
+
+.welcome-content {
+  position: relative;
+  z-index: 2;
+  width: min(480px, 100%);
+  color: var(--blanco);
+}
+
+.welcome-content .brand-mark {
+  margin-bottom: 1.4rem;
+  background: var(--rojo);
+}
+
+.welcome-content .eyebrow {
+  color: var(--amarillo);
+}
+
+.welcome-content h1 {
+  margin-top: 0.5rem;
+  color: var(--blanco);
+  font-size: clamp(2.8rem, 12vw, 4.6rem);
+  font-weight: 700;
+}
+
+.welcome-content .divider {
+  justify-content: center;
+}
+
+.welcome-content .divider-line {
+  background: linear-gradient(to right, transparent, rgba(255, 253, 249, 0.35), transparent);
+}
+
+.welcome-description {
+  margin: 0 auto;
+  color: rgba(255, 253, 249, 0.84);
+  font-size: 0.98rem;
+  line-height: 1.75;
+}
+
+.welcome-table {
+  margin-top: 1.3rem;
+  color: var(--amarillo-licht);
+  font-family: var(--font-accent-stack);
+  font-size: 1.25rem;
+}
+
+/* Zwarte knop met witte tekst, met een gele rand zodat hij op de donkere
+   sfeerfoto goed zichtbaar blijft. */
+.welcome-button {
+  width: 100%;
+  margin-top: 1.75rem;
+  padding: 1rem 1.5rem;
+  border-color: var(--amarillo);
+  background: var(--negro);
+  color: var(--blanco);
+  font-size: 0.9rem;
+}
+
+.welcome-button:hover {
+  border-color: var(--amarillo);
+  background: var(--rojo);
+  color: var(--blanco);
+}
+
+/* ==========================================================================
+   Keukenscherm
+   ========================================================================== */
+
+.kitchen-page {
+  min-height: 100dvh;
+  padding: 1.5rem 1.25rem;
+  background: var(--carbon);
+  color: var(--blanco);
+}
+
+.kitchen-header,
+.kitchen-grid,
+.kitchen-footer {
+  width: min(1380px, 100%);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.kitchen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.35rem;
+  padding-bottom: 1.1rem;
+  border-bottom: 1px solid rgba(255, 253, 249, 0.14);
+}
+
+.kitchen-title {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.kitchen-title h1 {
+  color: var(--blanco);
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+.kitchen-title p {
+  color: rgba(255, 253, 249, 0.6);
+  font-family: var(--font-accent-stack);
+  font-size: 1rem;
+}
+
+.kitchen-header-rechts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.kitchen-voorraad-teller {
+  margin-left: 0.45rem;
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+  background: var(--rojo);
+  color: var(--blanco);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.connection-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(255, 253, 249, 0.2);
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  color: rgba(255, 253, 249, 0.78);
+  font-size: 0.75rem;
+}
+
+.connection-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+.connection-dot.live {
+  background: var(--amarillo);
+  box-shadow: 0 0 0 4px rgba(240, 180, 41, 0.18);
+}
+
+.connection-dot.offline {
+  background: var(--rojo);
+}
+
+.kitchen-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.kitchen-column {
+  min-height: 16rem;
+  padding: 1rem;
+  border: 1px solid rgba(255, 253, 249, 0.12);
+  border-top: 4px solid var(--rojo);
+  border-radius: 0.9rem;
+  background: #1d1614;
+}
+
+.kitchen-column.preparing {
+  border-top-color: var(--amarillo);
+}
+
+.kitchen-column.ready {
+  border-top-color: var(--oliva);
+}
+
+.kitchen-column-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+  color: var(--blanco);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.kitchen-count {
+  display: grid;
+  min-width: 1.7rem;
+  height: 1.7rem;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 253, 249, 0.1);
+  color: rgba(255, 253, 249, 0.85);
+  font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.kitchen-empty {
+  color: rgba(255, 253, 249, 0.45);
+  font-family: var(--font-accent-stack);
+  font-size: 1rem;
+}
+
+.kitchen-orders {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.order-card {
+  padding: 0.95rem;
+  border: 1px solid rgba(255, 253, 249, 0.1);
+  border-radius: 0.75rem;
+  background: #2a201d;
+}
+
+.order-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.65rem;
+}
+
+.order-table {
+  color: var(--amarillo-licht);
+  font-family: var(--font-display-stack);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.order-time {
+  color: rgba(255, 253, 249, 0.5);
+  font-size: 0.7rem;
+}
+
+.order-items {
+  margin: 0 0 0.7rem;
+  padding: 0;
+  list-style: none;
+  color: rgba(255, 253, 249, 0.9);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.order-note {
+  margin-bottom: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  border-left: 3px solid var(--amarillo);
+  border-radius: 0 0.4rem 0.4rem 0;
+  background: rgba(240, 180, 41, 0.14);
+  color: var(--amarillo-licht);
+  font-size: 0.78rem;
+}
+
+.order-status-button {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  padding: 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.order-status-button.start {
+  background: var(--amarillo);
+  color: var(--negro);
+}
+
+.order-status-button.start:hover {
+  background: var(--blanco);
+}
+
+.order-status-button.done {
+  background: var(--oliva);
+  color: #ffffff;
+}
+
+.order-status-button.done:hover {
+  background: #7d8d52;
+}
+
+.order-status-button.reset {
+  border-color: rgba(255, 253, 249, 0.22);
+  background: transparent;
+  color: rgba(255, 253, 249, 0.7);
+}
+
+.order-status-button.reset:hover {
+  border-color: var(--rojo);
+  color: var(--blanco);
+}
+
+.kitchen-footer {
+  margin-top: 1.25rem;
+  color: rgba(255, 253, 249, 0.5);
+  font-size: 0.78rem;
+  text-align: right;
+}
+
+/* ==========================================================================
+   Voorraadscherm (achter de schermen, donker zoals het keukenscherm)
+   ========================================================================== */
+
+.voorraad-page,
+.uitgifte-page {
+  min-height: 100dvh;
+  padding: 1.5rem 1.25rem 3rem;
+  background: var(--carbon);
+  color: var(--blanco);
+}
+
+.voorraad-header,
+.uitgifte-header,
+.voorraad-page > section,
+.uitgifte-page > section,
+.voorraad-melding,
+.voorraad-waarschuwing,
+.voorraad-toolbar,
+.voorraad-panelen {
+  width: min(1440px, 100%);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.voorraad-header,
+.uitgifte-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.1rem;
+  border-bottom: 1px solid rgba(255, 253, 249, 0.14);
+}
+
+.voorraad-title,
+.uitgifte-titel {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.voorraad-title h1,
+.uitgifte-titel h1 {
+  color: var(--blanco);
+  font-size: 1.7rem;
+  font-weight: 600;
+}
+
+.voorraad-title p,
+.uitgifte-titel p {
+  color: rgba(255, 253, 249, 0.6);
+  font-family: var(--font-accent-stack);
+  font-size: 1rem;
+}
+
+.voorraad-header-rechts,
+.uitgifte-header-rechts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.voorraad-melding,
+.voorraad-waarschuwing {
+  margin-bottom: 1rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.7rem;
+  font-size: 0.85rem;
+}
+
+.voorraad-melding {
+  border: 1px solid rgba(240, 180, 41, 0.4);
+  background: rgba(240, 180, 41, 0.14);
+  color: var(--amarillo-licht);
+}
+
+.voorraad-waarschuwing {
+  border: 1px solid rgba(184, 29, 36, 0.5);
+  background: rgba(184, 29, 36, 0.18);
+  color: #ffc9cb;
+}
+
+.voorraad-page code {
+  padding: 0.05rem 0.3rem;
+  border-radius: 0.3rem;
+  background: rgba(255, 253, 249, 0.12);
+  font-size: 0.85em;
+}
+
+/* Knoppen op het donkere scherm */
+.mini-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 253, 249, 0.24);
+  border-radius: 0.55rem;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  color: var(--blanco);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.mini-button:hover {
+  border-color: rgba(255, 253, 249, 0.5);
+  background: rgba(255, 253, 249, 0.08);
+}
+
+.mini-button.accent {
+  border-color: var(--amarillo);
+  background: var(--amarillo);
+  color: var(--negro);
+}
+
+.mini-button.accent:hover {
+  background: var(--amarillo-licht);
+}
+
+.mini-button:disabled,
+.icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.icon-button {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid rgba(255, 253, 249, 0.2);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: rgba(255, 253, 249, 0.8);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  border-color: var(--rojo);
+  color: var(--blanco);
+}
+
+/* Kerncijfers */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.kpi-card {
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(255, 253, 249, 0.12);
+  border-top: 3px solid rgba(255, 253, 249, 0.25);
+  border-radius: 0.8rem;
+  background: #1d1614;
+}
+
+.kpi-card.ok {
+  border-top-color: var(--oliva);
+}
+
+.kpi-card.warn {
+  border-top-color: var(--amarillo);
+}
+
+.kpi-card.alarm {
+  border-top-color: var(--rojo);
+}
+
+.kpi-label {
+  color: rgba(255, 253, 249, 0.6);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kpi-waarde {
+  margin-top: 0.3rem;
+  color: var(--blanco);
+  font-family: var(--font-display-stack);
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+.kpi-hint {
+  margin-top: 0.15rem;
+  color: rgba(255, 253, 249, 0.5);
+  font-size: 0.72rem;
+}
+
+/* Werkbalk */
+.voorraad-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.voorraad-zoek,
+.voorraad-select {
+  border: 1px solid rgba(255, 253, 249, 0.18);
+  border-radius: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  background: #120e0d;
+  color: var(--blanco);
+  font-size: 0.82rem;
+  outline: none;
+}
+
+.voorraad-zoek {
+  min-width: 15rem;
+  flex: 1;
+}
+
+.voorraad-zoek:focus,
+.voorraad-select:focus {
+  border-color: var(--amarillo);
+}
+
+.voorraad-check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255, 253, 249, 0.8);
+  font-size: 0.8rem;
+}
+
+/* Panelen */
+.voorraad-panelen {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr);
+  align-items: start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.voorraad-zijkolom {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.panel {
+  padding: 1rem;
+  border: 1px solid rgba(255, 253, 249, 0.12);
+  border-radius: 0.9rem;
+  background: #1d1614;
+}
+
+.panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+  color: var(--blanco);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.panel-teller {
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: rgba(255, 253, 249, 0.1);
+  color: rgba(255, 253, 249, 0.8);
+  font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.panel-uitleg {
+  margin-bottom: 0.9rem;
+  color: rgba(255, 253, 249, 0.6);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.panel-leeg {
+  color: rgba(255, 253, 249, 0.5);
+  font-family: var(--font-accent-stack);
+  font-size: 1rem;
+}
+
+/* Productenlijst */
+.product-lijst {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.product-rij {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(255, 253, 249, 0.1);
+  border-radius: 0.7rem;
+  background: #241c19;
+}
+
+.product-naam {
+  color: var(--blanco);
+  font-family: var(--font-display-stack);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.product-meta {
+  margin-top: 0.15rem;
+  color: rgba(255, 253, 249, 0.5);
+  font-size: 0.72rem;
+}
+
+/* Voor welke gerechten dit ingrediënt dient (en hoeveel per portie). */
+.product-gerechten {
+  margin-top: 0.25rem;
+  color: rgba(240, 180, 41, 0.8);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.product-aantal {
+  color: var(--blanco);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.product-bar {
+  display: block;
+  height: 0.4rem;
+  margin: 0.35rem 0 0.3rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 253, 249, 0.12);
+}
+
+.product-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--oliva);
+}
+
+.product-bar-fill.laag {
+  background: var(--amarillo);
+}
+
+.product-bar-fill.kritiek {
+  background: var(--rojo);
+}
+
+.product-bar-fill.leeg {
+  background: transparent;
+}
+
+.status-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.status-badge.ok {
+  background: rgba(107, 122, 69, 0.3);
+  color: #c3d494;
+}
+
+.status-badge.laag {
+  background: rgba(240, 180, 41, 0.2);
+  color: var(--amarillo-licht);
+}
+
+.status-badge.kritiek {
+  background: rgba(184, 29, 36, 0.32);
+  color: #ffb0b4;
+}
+
+.status-badge.leeg {
+  background: var(--rojo);
+  color: var(--blanco);
+}
+
+.product-acties {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  grid-column: 1 / -1;
+}
+
+.boek-input,
+.boek-select {
+  border: 1px solid rgba(255, 253, 249, 0.18);
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  background: #120e0d;
+  color: var(--blanco);
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.boek-input {
+  width: 5.5rem;
+}
+
+.boek-input:focus,
+.boek-select:focus {
+  border-color: var(--amarillo);
+}
+
+.boek-input.breed,
+.boek-select.breed {
+  width: 100%;
+}
+
+.boek-veld {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: rgba(255, 253, 249, 0.65);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.product-bewerken {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) auto;
+  align-items: end;
+  gap: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed rgba(255, 253, 249, 0.16);
+}
+
+/* Recepten (inklapbaar) */
+.recepten-details summary {
+  cursor: pointer;
+}
+
+.recepten-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.recepten-details summary::after {
+  color: rgba(255, 253, 249, 0.6);
+  content: "▾";
+  font-size: 0.9rem;
+}
+
+.recepten-details[open] summary {
+  margin-bottom: 0.9rem;
+}
+
+.recepten-details[open] summary::after {
+  content: "▴";
+}
+
+.recept-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 0.75rem;
+}
+
+.recept-kaart {
+  padding: 0.85rem;
+  border: 1px solid rgba(255, 253, 249, 0.1);
+  border-radius: 0.75rem;
+  background: #241c19;
+}
+
+.recept-kaart.uitverkocht {
+  border-color: rgba(184, 29, 36, 0.55);
+  background: rgba(184, 29, 36, 0.12);
+}
+
+.recept-kop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.recept-categorie {
+  color: rgba(255, 253, 249, 0.5);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.recept-titel {
+  color: var(--blanco);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.recept-kies {
+  width: 100%;
+  margin-bottom: 0.6rem;
+  font-size: 0.72rem;
+}
+
+.recept-regels {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.78rem;
+}
+
+.recept-regels li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: rgba(255, 253, 249, 0.78);
+}
+
+.recept-regels li.tekort {
+  color: #ffb0b4;
+  font-weight: 600;
+}
+
+/* Mutatielog */
+.mutatie-lijst {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 24rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.mutatie-rij {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(255, 253, 249, 0.07);
+  font-size: 0.78rem;
+}
+
+.mutatie-tijd {
+  color: rgba(255, 253, 249, 0.45);
+  font-variant-numeric: tabular-nums;
+}
+
+.mutatie-naam {
+  color: var(--blanco);
+}
+
+.mutatie-notitie {
+  display: block;
+  color: rgba(255, 253, 249, 0.45);
+  font-size: 0.7rem;
+}
+
+.mutatie-delta {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.mutatie-delta.plus {
+  color: #c3d494;
+}
+
+.mutatie-delta.min {
+  color: #ffb0b4;
+}
+
+.mutatie-reden {
+  grid-column: 2 / -1;
+  color: rgba(255, 253, 249, 0.45);
+  font-size: 0.7rem;
+}
+
+/* Nieuw product */
+.nieuw-product,
+.zoek-rij {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.zoek-rij {
+  flex-direction: row;
+  align-items: center;
+}
+
+.zoek-melding {
+  color: rgba(255, 253, 249, 0.6);
+  font-size: 0.78rem;
+}
+
+.zoek-resultaten {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 14rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.zoek-resultaten button {
+  display: block;
+  width: 100%;
+  border: 1px solid rgba(255, 253, 249, 0.14);
+  border-radius: 0.55rem;
+  padding: 0.5rem 0.6rem;
+  background: #241c19;
+  color: var(--blanco);
+  text-align: left;
+  cursor: pointer;
+}
+
+.zoek-resultaten button:hover {
+  border-color: var(--amarillo);
+}
+
+.zoek-naam {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.zoek-detail {
+  display: block;
+  color: rgba(255, 253, 249, 0.5);
+  font-size: 0.7rem;
+}
+
+.nieuw-rij {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 0.6rem;
+}
+
+/* ==========================================================================
+   Uitgiftescherm (keuken: zien wat er is en afboeken wat je pakt)
+   ========================================================================== */
+
+/* Rolkeuze zonder inloggen */
+.uitgifte-rolbalk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.rol-kiezer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.rol-kiezer-label {
+  margin-right: 0.25rem;
+  color: rgba(255, 253, 249, 0.6);
+  font-size: 0.78rem;
+}
+
+.rol-knop {
+  border: 1px solid rgba(255, 253, 249, 0.22);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  background: transparent;
+  color: rgba(255, 253, 249, 0.85);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rol-knop:hover {
+  border-color: var(--amarillo);
+}
+
+.rol-knop.actief {
+  border-color: var(--amarillo);
+  background: var(--amarillo);
+  color: var(--negro);
+}
+
+.uitgifte-regel {
+  color: rgba(255, 253, 249, 0.65);
+  font-size: 0.78rem;
+}
+
+.uitgifte-info {
+  margin-bottom: 1rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgba(240, 180, 41, 0.35);
+  border-radius: 0.7rem;
+  background: rgba(240, 180, 41, 0.1);
+  color: var(--amarillo-licht);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.uitgifte-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.1rem;
+}
+
+.uitgifte-teller {
+  margin-left: auto;
+  color: rgba(255, 253, 249, 0.6);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
+.uitgifte-gerecht-uitleg {
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--amarillo);
+  border-radius: 0 0.6rem 0.6rem 0;
+  background: rgba(240, 180, 41, 0.08);
+  color: rgba(255, 253, 249, 0.8);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.uitgifte-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.uitgifte-kaart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(255, 253, 249, 0.12);
+  border-radius: 0.9rem;
+  background: #1d1614;
+}
+
+.uitgifte-kaart-kop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.uitgifte-naam {
+  color: var(--blanco);
+  font-family: var(--font-display-stack);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.uitgifte-gebruikt {
+  margin-top: 0.15rem;
+  color: rgba(255, 253, 249, 0.5);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.uitgifte-voorraad {
+  color: var(--blanco);
+  font-family: var(--font-display-stack);
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+.uitgifte-voorraad small {
+  display: block;
+  margin-top: 0.1rem;
+  color: rgba(255, 253, 249, 0.5);
+  font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 400;
+}
+
+.uitgifte-snel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.pak-knop {
+  min-width: 4.5rem;
+  border: 1px solid rgba(255, 253, 249, 0.2);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  background: transparent;
+  color: var(--blanco);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pak-knop:hover {
+  border-color: var(--amarillo);
+  background: rgba(240, 180, 41, 0.14);
+}
+
+.pak-knop:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* Uitgiftes boven de drempel moeten eerst naar de hoofdchef. */
+.pak-knop.vraagt-goedkeuring {
+  border-color: rgba(240, 180, 41, 0.6);
+  color: var(--amarillo-licht);
+}
+
+.uitgifte-waarde {
+  margin-left: 0.35rem;
+  color: rgba(255, 253, 249, 0.6);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.uitgifte-waarde.vraagt-goedkeuring {
+  color: var(--amarillo);
+  font-weight: 600;
+}
+
+/* Aanvragen die op de hoofdchef wachten */
+.aanvraag-lijst {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aanvraag-rij {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid rgba(240, 180, 41, 0.3);
+  border-radius: 0.6rem;
+  background: rgba(240, 180, 41, 0.07);
+  font-size: 0.8rem;
+}
+
+.aanvraag-rij.afgewezen {
+  border-color: rgba(184, 29, 36, 0.4);
+  background: rgba(184, 29, 36, 0.1);
+}
+
+.aanvraag-acties {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.uitgifte-pakken {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed rgba(255, 253, 249, 0.14);
+}
+
+.gepakt-lijst {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 22rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.gepakt-rij {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(255, 253, 249, 0.07);
+  font-size: 0.8rem;
+}
+
+.gepakt-naam {
+  color: var(--blanco);
+}
+
+.gepakt-aantal {
+  color: var(--amarillo-licht);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   QR-pagina
+   ========================================================================== */
+
+.qr-page {
+  min-height: 100dvh;
+  padding: 2.5rem 1.25rem;
+}
+
+.qr-card {
+  width: min(580px, 100%);
+  margin: 0 auto;
+  padding: clamp(1.5rem, 5vw, 2.75rem);
+  border: 1px solid var(--linea);
+  border-radius: 1.4rem;
+  background: var(--blanco);
+  box-shadow: var(--schaduw);
+}
+
+.qr-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 1.4rem;
+  padding-bottom: 1.2rem;
+  border-bottom: 1px solid var(--linea);
+}
+
+.qr-card h1 {
+  margin-top: 0.15rem;
+  font-size: clamp(1.7rem, 5vw, 2.3rem);
+  font-weight: 700;
+}
+
+.qr-description {
+  margin-bottom: 1.6rem;
+  color: var(--gris);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.qr-label {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: var(--negro);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.qr-input {
+  padding: 0.8rem;
+  font-size: 1rem;
+}
+
+.qr-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 1.6rem;
+  padding: 1.25rem;
+  border: 1px dashed rgba(184, 29, 36, 0.4);
+  border-radius: 1rem;
+  background: var(--crema);
+}
+
+.qr-image {
+  width: 15rem;
+  height: 15rem;
+  border-radius: 0.5rem;
+}
+
+.qr-table {
+  margin-top: 0.8rem;
+  color: var(--negro);
+  font-family: var(--font-display-stack);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.qr-link {
+  margin-top: 0.2rem;
+  color: var(--gris);
+  font-size: 0.72rem;
+}
+
+.qr-download {
+  margin-top: 1.1rem;
+}
+
+/* ==========================================================================
+   Responsief
+   ========================================================================== */
+
+@media (min-width: 700px) {
+  .home-page {
+    --page-pad: 2.5rem;
+  }
+
+  .menu-content,
+  .menu-header-inner,
+  .cart-inner {
+    padding-right: 2rem;
+    padding-left: 2rem;
+  }
+
+  .kitchen-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1000px) {
+  .voorraad-panelen {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 699px) {
+  .home-nav-note {
+    display: none;
+  }
+
+  .home-hero-inner {
+    grid-template-columns: 1fr;
+  }
+
+  .home-note {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .home-copy h1 {
+    font-size: clamp(2.4rem, 13vw, 3.4rem);
+  }
+
+  .menu-welcome {
+    display: block;
+  }
+
+  .menu-welcome p:last-child {
+    margin-top: 0.75rem;
+    text-align: left;
+  }
+
+  .kitchen-header {
+    align-items: flex-start;
+  }
+
+  .kitchen-title h1 {
+    font-size: 1.25rem;
+  }
+
+  /* Op mobiel wordt elke productregel een compact kaartje van drie regels. */
+  .product-rij {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.3rem 0.6rem;
+  }
+
+  .product-naam-cel {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .product-status-cel {
+    grid-row: 1;
+    grid-column: 2;
+    justify-self: end;
+  }
+
+  .product-voorraad-cel {
+    grid-row: 2;
+    grid-column: 1 / -1;
+  }
+
+  .product-acties {
+    grid-row: 3;
+    grid-column: 1 / -1;
+  }
+
+  .voorraad-zoek {
+    min-width: 100%;
+  }
+
+  .kpi-waarde {
+    font-size: 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  a {
+    transition: none;
+  }
 }

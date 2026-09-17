@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Hulpbestanden voor de browsercontrole en het schoolverslag:
+    "docs/**",
   ]),
 ]);
 
