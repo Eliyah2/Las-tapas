@@ -12,6 +12,10 @@
 const BASIS = process.argv[2] ?? "http://localhost:3000";
 const TAFEL = "TEST-" + Math.floor(Math.random() * 100000);
 
+// Wat het totaal moet worden als beide bestellingen geaccepteerd worden.
+// De server rekent dit zelf uit; hier staat alleen wat wij verwachten.
+const VERWACHT_TOTAAL = 2 * 6.5 + 18.5 + 9.0; // € 40,50
+
 let gelukt = 0;
 let mislukt = 0;
 
@@ -41,6 +45,12 @@ async function json(path, opties = {}) {
 
 console.log(`\nEindtest volledige proces — tafel ${TAFEL} op ${BASIS}\n`);
 
+// Stap 0: beginvoorraad terugzetten, zodat de test elke keer opnieuw
+// hetzelfde resultaat geeft (reproduceerbaar, ook na eerdere testruns).
+console.log("0. Beginvoorraad terugzetten (reproduceerbaarheid)");
+const reset = await json("/api/voorraad/reset", { method: "POST" });
+check("Voorraad teruggezet naar beginstand", reset.status === 200);
+
 // Stap 1: gast bestelt op de iPad (menu → POST /api/orders)
 console.log("1. Bestellen (iPad-flow)");
 const order1 = await json("/api/orders", {
@@ -66,7 +76,11 @@ const order2 = await json("/api/orders", {
     items: [{ id: "gambas-al-ajillo", quantity: 1 }],
   }),
 });
-check("Bestelling 2 geaccepteerd (1× gambas €9,00)", order2.status === 201);
+check(
+  "Bestelling 2 geaccepteerd (1× gambas €9,00)",
+  order2.status === 201,
+  order2.status === 201 ? "" : order2.body?.error
+);
 
 // Stap 2: keuken verwerkt de bestelling (PATCH /api/orders/[id]/status)
 console.log("2. Keuken-flow (status aanpassen)");
@@ -97,9 +111,9 @@ const rekening = await json("/api/betalen", {
 });
 const sessie = rekening.body?.sessie;
 check(
-  "Rekening gestart met totaal € 40,50",
-  rekening.status === 201 && sessie?.bedrag === 40.5,
-  `server berekende: € ${sessie?.bedrag}`
+  `Rekening gestart met totaal € ${VERWACHT_TOTAAL.toFixed(2).replace(".", ",")}`,
+  rekening.status === 201 && sessie?.bedrag === VERWACHT_TOTAAL,
+  `server berekende: € ${sessie?.bedrag ?? "onbekend"}`
 );
 
 const onbekend = await json("/api/betalen", {
