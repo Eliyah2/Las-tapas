@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { formatPrice } from "@/lib/format";
 
 type Sessie = {
@@ -14,24 +14,9 @@ type Sessie = {
 };
 
 export default function BetalenPage() {
-  return (
-    <Suspense
-      fallback={
-        <main className="pay-page">
-          <div className="pay-card">
-            <p>Betaalpagina laden…</p>
-          </div>
-        </main>
-      }
-    >
-      <BetalenInner />
-    </Suspense>
-  );
-}
-
-function BetalenInner() {
-  const searchParams = useSearchParams();
-  const id = searchParams.get("sessie") ?? "";
+  // Het sessie-id zit in het pad van de route (/betalen/[id]), niet in de query.
+  const params = useParams<{ id: string }>();
+  const id = Array.isArray(params.id) ? params.id[0] ?? "" : params.id ?? "";
 
   const [sessie, setSessie] = useState<Sessie | null>(null);
   const [nummer, setNummer] = useState("");

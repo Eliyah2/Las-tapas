@@ -367,6 +367,44 @@ for (const p of paginaChecks) {
   check(`Pagina ${p.pad} geeft HTTP 200`, p.status === 200, `HTTP ${p.status}`);
 }
 
+// Bereikbaarheid van de pagina's. Let op: deze pagina's zijn clientcomponents,
+// dus hun inhoud wordt pas in de browser opgebouwd. Daarom controleert deze
+// test alleen wat op HTTP-niveau vast te stellen is: de pagina bestaat en
+// geeft geen serverfout. De inhoud (teksten, knoppen, klikken) is apart
+// handmatig in een echte browser getest; zie het testrapport.
+{
+  const paginaPaden = [
+    `/rekening?tafel=${TAFEL}`,
+    `/status?tafel=${TAFEL}`,
+    `/menu?tafel=${TAFEL}`,
+    "/keuken",
+    "/betalen/00000000-0000-0000-0000-000000000000",
+  ];
+
+  for (const pad of paginaPaden) {
+    const r = await fetch(`${BASIS}${pad}`);
+    const html = await r.text();
+    const isServerfout =
+      /application error|unhandled runtime|__next_error__/i.test(html);
+    check(
+      `Pagina ${pad.split("?")[0]} bestaat en geeft geen serverfout`,
+      r.status === 200 && !isServerfout,
+      `HTTP ${r.status}`
+    );
+  }
+
+  // Tafelnummer met scriptinhoud mag niet uitgevoerd worden.
+  const rareRekening = await req("/api/betalen", {
+    method: "POST",
+    body: JSON.stringify({ table: "<script>alert(1)</script>" }),
+  });
+  check(
+    "Tafelnummer met scriptinhoud wordt veilig behandeld",
+    rareRekening.status === 404,
+    `HTTP ${rareRekening.status}`
+  );
+}
+
 // Performance: vijf opeenvolgende API-calls moeten snel genoeg zijn voor
 // een restaurant-situatie (grens: gemiddeld onder 500 ms).
 const start = Date.now();
