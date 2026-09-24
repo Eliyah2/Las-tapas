@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { MENU } from "@/lib/menu";
 import { formatPrice } from "@/lib/format";
@@ -211,12 +212,23 @@ function MenuInner() {
           <p className="eyebrow">¡Gracias!</p>
           <h1>Bestelling ontvangen!</h1>
           <p>Tafel {placed.table}: de keuken is op de hoogte. Eet smakelijk!</p>
-          <button
-            onClick={() => setPlaced(null)}
-            className="button mt-6"
-          >
-            Nog iets bestellen
-          </button>
+          <div className="success-actions">
+            <Link
+              href={`/status?tafel=${encodeURIComponent(placed.table)}`}
+              className="button"
+            >
+              Bekijk de status van je bestelling
+            </Link>
+            <Link
+              href={`/rekening?tafel=${encodeURIComponent(placed.table)}`}
+              className="success-klein"
+            >
+              Direct afrekenen
+            </Link>
+            <button onClick={() => setPlaced(null)} className="success-klein">
+              Nog iets bestellen
+            </button>
+          </div>
         </div>
       </main>
     );
