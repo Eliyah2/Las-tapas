@@ -1,4 +1,5 @@
 -- Las Tapas · Supabase schema
+-- Covers the whole app: menu, orders, inventory (voorraad) and payments.
 -- Run this file in Supabase Dashboard → SQL Editor.
 -- The app can keep using its current in-memory store until the API is migrated.
 
@@ -162,3 +163,274 @@ select
 from public.orders o
 left join public.order_items oi on oi.order_id = o.id
 group by o.id;
+
+-- ===========================================================================
+-- Inventory (voorraad): ingredients, stock movements, approval requests,
+-- recipes, and the settings the manager can change.
+-- ===========================================================================
+
+-- Ingredients. `stock` is live data, which is why the seed at the bottom of
+-- this file never overwrites it on a re-run.
+create table if not exists public.ingredients (
+  id text primary key,
+  name text not null check (char_length(btrim(name)) >= 2),
+  unit text not null check (unit in ('gram', 'ml', 'stuk')),
+  stock numeric(12, 3) not null default 0 check (stock >= 0),
+  par_level numeric(12, 3) not null default 0 check (par_level >= 0),
+  cost_per_unit numeric(12, 6) not null default 0 check (cost_per_unit >= 0),
+  supplier text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- Every change to a stock count, with the reason and who booked it. `name` is a
+-- snapshot on purpose: a movement is history and must not change when a product
+-- gets renamed. Also replaces the 500-entry cap of data/voorraad.json.
+create table if not exists public.stock_movements (
+  id uuid primary key default gen_random_uuid(),
+  ingredient_id text not null references public.ingredients(id) on update cascade on delete cascade,
+  name text not null,
+  delta numeric(12, 3) not null,
+  reason text not null check (reason in ('levering', 'verbruik', 'uitgifte', 'verlies', 'correctie')),
+  note text,
+  performed_by text check (performed_by in ('kok', 'hoofdchef', 'manager')),
+  created_at timestamptz not null default now()
+);
+
+-- A kitchen pick worth more than the approval threshold does not move stock:
+-- it waits here for the hoofdchef instead. `estimated_value` is the pick priced
+-- at the moment of the request.
+create table if not exists public.stock_requests (
+  id uuid primary key default gen_random_uuid(),
+  ingredient_id text not null references public.ingredients(id) on update cascade on delete cascade,
+  name text not null,
+  unit text not null check (unit in ('gram', 'ml', 'stuk')),
+  amount numeric(12, 3) not null check (amount > 0),
+  estimated_value numeric(10, 2) not null default 0 check (estimated_value >= 0),
+  note text,
+  requested_by text not null check (requested_by in ('kok', 'hoofdchef', 'manager')),
+  status text not null default 'open' check (status in ('open', 'goedgekeurd', 'afgewezen')),
+  created_at timestamptz not null default now(),
+  handled_by text check (handled_by in ('kok', 'hoofdchef', 'manager')),
+  handled_at timestamptz,
+  reason text,
+  -- An open request has no decision yet; a handled one always has both who and
+  -- when, so nobody can quietly change a decision afterwards.
+  constraint stock_requests_handled_check check (
+    (status = 'open' and handled_by is null and handled_at is null)
+    or (status <> 'open' and handled_by is not null and handled_at is not null)
+  )
+);
+
+-- What one portion of a dish takes out of stock (RECEPTEN_SEED in the app).
+create table if not exists public.recipe_lines (
+  menu_item_id text not null references public.menu_items(id) on update cascade on delete cascade,
+  ingredient_id text not null references public.ingredients(id) on update cascade on delete restrict,
+  amount numeric(12, 3) not null check (amount > 0),
+  created_at timestamptz not null default now(),
+  primary key (menu_item_id, ingredient_id)
+);
+
+-- Betaalsessies per table. The amount is always recalculated server-side from
+-- the orders of that table and never accepted from the browser.
+create table if not exists public.payment_sessions (
+  id uuid primary key default gen_random_uuid(),
+  table_number text not null check (char_length(btrim(table_number)) between 1 and 30),
+  amount numeric(10, 2) not null default 0 check (amount >= 0),
+  status text not null default 'open' check (status in ('open', 'betaald')),
+  -- Only the last four digits of the card are kept; the full number never
+  -- reaches the database (see lib/payments.ts).
+  last_four text check (last_four is null or last_four ~ '^[0-9]{4}$'),
+  created_at timestamptz not null default now(),
+  paid_at timestamptz,
+  constraint payment_sessions_paid_check check (status = 'open' or paid_at is not null)
+);
+
+-- The two things the manager can change (Instellingen in lib/inventory.ts).
+-- Single-row table: the primary key plus its check make a second row impossible.
+create table if not exists public.app_settings (
+  id boolean primary key default true check (id),
+  auto_stock_deduction boolean not null default true,
+  approval_threshold numeric(10, 2) not null default 15 check (approval_threshold >= 0),
+  updated_at timestamptz not null default now()
+);
+
+insert into public.app_settings (id)
+values (true)
+on conflict (id) do nothing;
+
+create index if not exists ingredients_name_idx
+  on public.ingredients(name);
+
+create index if not exists stock_movements_ingredient_idx
+  on public.stock_movements(ingredient_id, created_at desc);
+
+create index if not exists stock_movements_created_idx
+  on public.stock_movements(created_at desc);
+
+-- The kitchen and the hoofdchef only ever ask for the open ones.
+create index if not exists stock_requests_open_idx
+  on public.stock_requests(created_at desc)
+  where status = 'open';
+
+create index if not exists recipe_lines_ingredient_idx
+  on public.recipe_lines(ingredient_id);
+
+create index if not exists payment_sessions_table_idx
+  on public.payment_sessions(lower(btrim(table_number)), created_at desc);
+
+-- One open bill per table, exactly like paymentStore().openVoorTafel().
+-- Tables are matched case-insensitively, hence the lower(btrim(...)).
+create unique index if not exists payment_sessions_one_open_idx
+  on public.payment_sessions(lower(btrim(table_number)))
+  where status = 'open';
+
+-- The bill of a table is the sum of its orders, matched case-insensitively.
+create index if not exists orders_table_number_idx
+  on public.orders(lower(btrim(table_number)), created_at);
+
+drop trigger if exists ingredients_set_updated_at on public.ingredients;
+create trigger ingredients_set_updated_at
+before update on public.ingredients
+for each row execute function public.set_updated_at();
+
+drop trigger if exists app_settings_set_updated_at on public.app_settings;
+create trigger app_settings_set_updated_at
+before update on public.app_settings
+for each row execute function public.set_updated_at();
+
+-- Stock levels, staff actions, recipe costs and card tails are none of a
+-- visitor's business, so RLS is on and there are deliberately NO policies:
+-- for anon and authenticated these tables stay invisible and read-only-empty.
+-- The Next.js API uses the server-only service-role key, which bypasses RLS.
+-- Realtime is not used here either: the app streams via its own SSE routes.
+alter table public.ingredients enable row level security;
+alter table public.stock_movements enable row level security;
+alter table public.stock_requests enable row level security;
+alter table public.recipe_lines enable row level security;
+alter table public.payment_sessions enable row level security;
+alter table public.app_settings enable row level security;
+
+-- Seed the ingredients. Safe to re-run: the product details are refreshed, but
+-- `stock` is deliberately left alone because the app keeps counting on it.
+insert into public.ingredients (id, name, unit, stock, par_level, cost_per_unit, supplier) values
+  ('patatas', 'Aardappelen', 'gram', 24000, 20000, 0.0025, 'Horeca Groothandel Zuid'),
+  ('aceite-oliva', 'Olijfolie', 'ml', 7500, 6000, 0.008, 'Horeca Groothandel Zuid'),
+  ('aioli', 'Aioli', 'gram', 2600, 2000, 0.006, 'Casa Sauzen'),
+  ('gambas', 'Garnalen', 'gram', 700, 2000, 0.018, 'Mariscos Ibéricos'),
+  ('knoflook', 'Knoflook', 'gram', 1400, 1000, 0.006, 'Horeca Groothandel Zuid'),
+  ('chili', 'Rode chilipeper', 'gram', 620, 500, 0.012, 'Horeca Groothandel Zuid'),
+  ('jamon', 'Serranoham', 'gram', 2100, 1500, 0.028, 'Jamón & Co'),
+  ('pan', 'Brood (paneermeel)', 'stuk', 72, 60, 1.2, 'Bakkerij Sol'),
+  ('huevos', 'Eieren', 'stuk', 96, 90, 0.35, 'Boerderij De Wilg'),
+  ('arroz-bomba', 'Bomba-rijst', 'gram', 9600, 8000, 0.005, 'Arroces Valencia'),
+  ('azafran', 'Saffraan', 'gram', 9, 30, 1.5, 'Especias Mancha'),
+  ('pollo', 'Kipfilet', 'gram', 5200, 4000, 0.009, 'Slagerij Norte'),
+  ('mejillones', 'Mosselen', 'gram', 3100, 2500, 0.007, 'Mariscos Ibéricos'),
+  ('calamares', 'Inktvisringen', 'gram', 480, 1500, 0.014, 'Mariscos Ibéricos'),
+  ('tomate', 'Tomaten', 'gram', 6400, 5000, 0.003, 'Horeca Groothandel Zuid'),
+  ('cebolla', 'Uien', 'gram', 3600, 3000, 0.0015, 'Horeca Groothandel Zuid'),
+  ('pimenton', 'Pimentón (paprikapoeder)', 'gram', 520, 400, 0.02, 'Especias Mancha'),
+  ('perejil', 'Peterselie', 'gram', 1000, 800, 0.008, 'Horeca Groothandel Zuid'),
+  ('entrecote', 'Entrecôte', 'gram', 6400, 5000, 0.026, 'Slagerij Norte'),
+  ('pimientos-padron', 'Padrón-pepers', 'gram', 1900, 1500, 0.012, 'Horeca Groothandel Zuid'),
+  ('limon', 'Citroenen', 'stuk', 52, 40, 0.45, 'Horeca Groothandel Zuid'),
+  ('nata', 'Slagroom', 'ml', 3100, 2500, 0.004, 'Zuivel Zuid'),
+  ('azucar', 'Suiker', 'gram', 2900, 2500, 0.0015, 'Horeca Groothandel Zuid'),
+  ('canela', 'Kaneel', 'gram', 380, 300, 0.03, 'Especias Mancha'),
+  ('chocolate', 'Chocoladesaus', 'gram', 2600, 2000, 0.007, 'Casa Sauzen'),
+  ('churros-deeg', 'Churrosdeeg', 'gram', 3900, 3000, 0.003, 'Bakkerij Sol'),
+  ('vino-tinto', 'Rode wijn (huiswijn)', 'ml', 12000, 9000, 0.004, 'Bodega Rioja'),
+  ('fruta-sangria', 'Sangriafruit', 'gram', 3800, 3000, 0.0045, 'Horeca Groothandel Zuid'),
+  ('cerveza', 'Estrella bier 33cl', 'stuk', 150, 120, 0.9, 'Bodega Rioja'),
+  ('agua', 'Mineraalwater 33cl', 'stuk', 62, 96, 0.55, 'Bodega Rioja')
+on conflict (id) do update set
+  name = excluded.name,
+  unit = excluded.unit,
+  par_level = excluded.par_level,
+  cost_per_unit = excluded.cost_per_unit,
+  supplier = excluded.supplier;
+
+-- Seed the recipes (the amounts are per portion).
+insert into public.recipe_lines (menu_item_id, ingredient_id, amount) values
+  ('patatas-bravas', 'patatas', 250),
+  ('patatas-bravas', 'aceite-oliva', 40),
+  ('patatas-bravas', 'tomate', 80),
+  ('patatas-bravas', 'pimenton', 5),
+  ('patatas-bravas', 'knoflook', 5),
+  ('patatas-bravas', 'aioli', 50),
+  ('gambas-al-ajillo', 'gambas', 180),
+  ('gambas-al-ajillo', 'aceite-oliva', 60),
+  ('gambas-al-ajillo', 'knoflook', 20),
+  ('gambas-al-ajillo', 'chili', 6),
+  ('croquetas', 'jamon', 60),
+  ('croquetas', 'pan', 1),
+  ('croquetas', 'huevos', 1),
+  ('croquetas', 'cebolla', 40),
+  ('croquetas', 'aceite-oliva', 40),
+  ('tortilla', 'huevos', 2),
+  ('tortilla', 'patatas', 200),
+  ('tortilla', 'cebolla', 80),
+  ('tortilla', 'aceite-oliva', 50),
+  ('paella-mixta', 'arroz-bomba', 120),
+  ('paella-mixta', 'azafran', 0.1),
+  ('paella-mixta', 'pollo', 180),
+  ('paella-mixta', 'mejillones', 120),
+  ('paella-mixta', 'calamares', 100),
+  ('paella-mixta', 'tomate', 100),
+  ('paella-mixta', 'pimenton', 4),
+  ('paella-mixta', 'aceite-oliva', 40),
+  ('pimientos', 'pimientos-padron', 180),
+  ('pimientos', 'aceite-oliva', 30),
+  ('churrasco', 'entrecote', 220),
+  ('churrasco', 'perejil', 10),
+  ('churrasco', 'knoflook', 8),
+  ('churrasco', 'aceite-oliva', 30),
+  ('churrasco', 'patatas', 150),
+  ('crema-catalana', 'huevos', 1),
+  ('crema-catalana', 'nata', 120),
+  ('crema-catalana', 'azucar', 40),
+  ('crema-catalana', 'canela', 2),
+  ('churros', 'churros-deeg', 180),
+  ('churros', 'chocolate', 80),
+  ('churros', 'azucar', 20),
+  ('churros', 'aceite-oliva', 50),
+  ('sangria', 'vino-tinto', 150),
+  ('sangria', 'fruta-sangria', 100),
+  ('sangria', 'limon', 0.25),
+  ('cerveza', 'cerveza', 1),
+  ('tinto', 'vino-tinto', 150),
+  ('agua', 'agua', 1)
+on conflict (menu_item_id, ingredient_id) do update set
+  amount = excluded.amount;
+
+-- The server-side equivalent of totaalPerTafel(): what a table owes right now.
+create or replace view public.table_bills
+with (security_invoker = true)
+as
+select
+  lower(btrim(o.table_number)) as table_key,
+  min(o.table_number) as table_number,
+  count(*) as order_count,
+  coalesce(sum(oi.price * oi.quantity), 0)::numeric(10, 2) as total,
+  min(o.created_at) as first_order_at,
+  max(o.created_at) as last_order_at
+from public.orders o
+left join public.order_items oi on oi.order_id = o.id
+group by lower(btrim(o.table_number));
+
+-- The inventory equivalent of portiesMogelijk()/statusVoorGerecht(): how many
+-- portions of each dish the current stock still allows, and how many of its
+-- ingredients are short. Dishes without a recipe count as 0, like the app does.
+create or replace view public.dish_availability
+with (security_invoker = true)
+as
+select
+  mi.id as menu_item_id,
+  mi.name,
+  coalesce(min(floor(ing.stock / rl.amount)) filter (where rl.ingredient_id is not null), 0)::integer as portions,
+  count(rl.ingredient_id) filter (where ing.stock < rl.amount) as shortages
+from public.menu_items mi
+left join public.recipe_lines rl on rl.menu_item_id = mi.id
+left join public.ingredients ing on ing.id = rl.ingredient_id
+group by mi.id, mi.name;

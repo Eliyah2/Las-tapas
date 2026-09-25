@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const sessie = paymentStore().get(id);
+  const sessie = await paymentStore().get(id);
 
   if (!sessie) {
     return NextResponse.json({ error: "Betaalsessie niet gevonden" }, { status: 404 });
@@ -52,7 +52,7 @@ export async function PATCH(
     );
   }
 
-  const resultaat = paymentStore().betaal(id, kaart);
+  const resultaat = await paymentStore().betaal(id, kaart);
   if (resultaat.fout || !resultaat.sessie) {
     return NextResponse.json(
       { error: resultaat.fout ?? "Betalen mislukt" },

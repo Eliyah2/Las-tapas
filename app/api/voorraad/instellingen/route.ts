@@ -33,7 +33,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    antwoord.automatischAfboeken = store.zetAutomatischAfboeken(
+    antwoord.automatischAfboeken = await store.zetAutomatischAfboeken(
       body.automatischAfboeken
     );
   }
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    antwoord.goedkeuringsdrempel = store.zetGoedkeuringsdrempel(
+    antwoord.goedkeuringsdrempel = await store.zetGoedkeuringsdrempel(
       Number(body.goedkeuringsdrempel)
     );
   }

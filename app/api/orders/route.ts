@@ -57,10 +57,10 @@ export async function POST(request: Request) {
   // `verbruik` boekt alles of niets, dus er verdwijnt nooit voorraad zonder order.
   // Registreert de keuken haar uitgiftes zelf, dan wordt er alleen gecontroleerd.
   const voorraad = voorraadStore();
-  const verbruik = voorraad.verbruik(
+  const verbruik = await voorraad.verbruik(
     orderItems.map((item) => ({ id: item.id, quantity: item.quantity })),
     table,
-    voorraad.rekentAutomatischAf()
+    await voorraad.rekentAutomatischAf()
   );
 
   if (!verbruik.gelukt) {
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
   }
 
   const store = orderStore();
-  const order = store.add({ table, items: orderItems, note });
+  const order = await store.add({ table, items: orderItems, note });
 
   return NextResponse.json(
     { order, voorraadMutaties: verbruik.mutaties.length },

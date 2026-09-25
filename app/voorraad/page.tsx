@@ -311,14 +311,6 @@ export default function VoorraadPage() {
 
       {melding && <p className="voorraad-melding">{melding}</p>}
 
-      {overzicht && !overzicht.persistent && (
-        <p className="voorraad-waarschuwing">
-          Let op: op deze server kan niet naar een bestand geschreven worden, dus
-          de voorraad staat alleen in het geheugen en is weg na een herstart.
-          Lokaal wordt alles in <code>data/voorraad.json</code> bewaard.
-        </p>
-      )}
-
       <section className="kpi-grid" aria-label="Samenvatting">
         <Kpi
           label="Voorraadwaarde"

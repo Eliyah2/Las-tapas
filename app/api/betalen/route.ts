@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Tafelnummer ontbreekt" }, { status: 400 });
   }
 
-  const { orders } = totaalPerTafel(table);
+  const { orders } = await totaalPerTafel(table);
   if (orders.length === 0) {
     return NextResponse.json(
       { error: `Er zijn geen bestellingen bekend voor tafel ${table}` },
@@ -28,6 +28,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const sessie = paymentStore().start(table);
+  const sessie = await paymentStore().start(table);
   return NextResponse.json({ sessie, aantalBestellingen: orders.length }, { status: 201 });
 }

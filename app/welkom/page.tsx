@@ -27,7 +27,7 @@ export default async function WelcomePage({
       <div className="welcome-content">
         <span className="brand-mark" aria-hidden="true">L</span>
         <p className="eyebrow">Bar de tapas · cocina española</p>
-        <h1>¡Bienvenidos!</h1>
+        <h1>Bienvenidos</h1>
         <Divider />
         <p className="welcome-description">
           Welkom bij Las Tapas. Bestel vanaf je eigen telefoon, je bestelling

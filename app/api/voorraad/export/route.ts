@@ -9,7 +9,7 @@ function kommaGetal(waarde: number): string {
 
 /** GET /api/voorraad/export — de voorraad als CSV, te openen in Excel. */
 export async function GET() {
-  const overzicht = voorraadStore().overzicht();
+  const overzicht = await voorraadStore().overzicht();
 
   const regels = [
     "Product;Eenheid;Voorraad;Par-niveau;Status;Inkoopprijs per eenheid;Voorraadwaarde;Leverancier",
