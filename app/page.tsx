@@ -49,7 +49,7 @@ export default function Home() {
           <span className="brand-mark" aria-hidden="true">L</span>
           <div>
             <div className="home-brand-name">Las Tapas</div>
-            <div className="home-brand-subtitle">bar de tapas · desde 2024</div>
+            <div className="home-brand-subtitle">bar de tapas · desde 2026</div>
           </div>
         </div>
         <p className="home-nav-note">Pequeños platos, grandes momentos</p>
