@@ -22,20 +22,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Tafelnummer ontbreekt" }, { status: 400 });
   }
 
-  const tafelSessie = tafelStore().get(table);
-
-  if (!tafelSessie) {
-    // Geen lopende tafel, maar deze tafel heeft wel al betaald: toon die
-    // afrekening (met het bonnetje) in plaats van een foutmelding.
-    const betaald = paymentStore().laatsteVoorTafel(table);
-    if (betaald && betaald.status === "betaald") {
-      return NextResponse.json({
-        ...TARIEF_INFO,
-        sessie: betaald,
-        openSinds: 0,
-      });
-    }
-
+  const { orders } = await totaalPerTafel(table);
+  if (orders.length === 0) {
     return NextResponse.json(
       {
         error: `Tafel ${table} is nog niet gestart. Start de tafel op de iPad of vraag de bediening.`,
@@ -44,14 +32,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const sessie = paymentStore().start(table);
-  return NextResponse.json(
-    {
-      ...TARIEF_INFO,
-      sessie,
-      openSinds: tafelSessie.gestartOp,
-      personen: tafelSessie.personen,
-    },
-    { status: 201 }
-  );
+  const sessie = await paymentStore().start(table);
+  return NextResponse.json({ sessie, aantalBestellingen: orders.length }, { status: 201 });
 }

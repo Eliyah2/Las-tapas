@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const uitkomst = voorraadStore().pak(body.productId, {
+  const uitkomst = await voorraadStore().pak(body.productId, {
     amount: Number(body.amount),
     note: body.note,
     door: body.door,
