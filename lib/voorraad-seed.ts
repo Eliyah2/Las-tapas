@@ -2,9 +2,12 @@
  * Beginvoorraad en recepten voor het voorraadsysteem.
  *
  * Dit bestand is met de hand bij te houden: pas hier een par-niveau, prijs,
- * leverancier of recept aan. Wat er in het voorraadscherm wordt bijgehouden
- * (tellingen en mutaties) staat in `data/voorraad.json`; met de knop
- * "Beginvoorraad herstellen" in het scherm komt de seed weer bovendrijven.
+ * leverancier of recept aan. De actuele aantallen, de mutaties en de aanvragen
+ * staan in de database (Supabase); met de knop "Beginvoorraad herstellen" in het
+ * scherm komt de seed hier weer bovendrijven.
+ *
+ * Nieuwe producten die hier staan, moeten ook in supabase/schema.sql bij de
+ * seed-insert staan, anders kent de database ze niet.
  */
 
 import type { Product, Recipe } from "./voorraad-types";
