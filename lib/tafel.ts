@@ -140,10 +140,14 @@ export function tafelStore() {
   };
 }
 
+/** Het moment waarop de eetperiode van een tafel afloopt. */
+export function eindeVanSessie(sessie: TafelSessie): number {
+  return sessie.gestartOp + DUUR_MINUTEN * 60_000;
+}
+
 /** Hoeveel minuten een sessie nog loopt (negatief als de tijd om is). */
 export function resterendeMinuten(sessie: TafelSessie, nu = Date.now()): number {
-  const einde = sessie.gestartOp + DUUR_MINUTEN * 60_000;
-  return Math.ceil((einde - nu) / 60_000);
+  return Math.ceil((eindeVanSessie(sessie) - nu) / 60_000);
 }
 
 /** Wat de rekening van deze tafel is: personen × het vaste tarief. */

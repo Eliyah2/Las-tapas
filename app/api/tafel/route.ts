@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  eindeVanSessie,
   rekeningVanTafel,
   TARIEF_INFO,
   tafelStore,
@@ -24,6 +25,8 @@ export async function GET(request: Request) {
     tariefPerPersoon,
     totaal,
     resterendeMinuten: sessie ? resterendeMinuten(sessie) : null,
+    // Het klokscherm telt hiermee af, zodat het op de seconde nauwkeurig is.
+    eindeOp: sessie ? eindeVanSessie(sessie) : null,
   });
 }
 
@@ -74,6 +77,7 @@ export async function POST(request: Request) {
       namen: sessie.namen,
       totaal,
       resterendeMinuten: resterendeMinuten(sessie),
+      eindeOp: eindeVanSessie(sessie),
     },
     { status: 201 }
   );

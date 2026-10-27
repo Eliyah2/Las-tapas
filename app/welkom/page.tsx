@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Divider } from "@/components/decor";
 import { DUUR_MINUTEN } from "@/lib/tafel";
+import AchtergrondVideo from "./achtergrond-video";
 import GastenKiezer from "./gasten-kiezer";
 
 export const metadata: Metadata = {
@@ -24,6 +25,10 @@ export default async function WelcomePage({
         style={{ backgroundImage: "url('/tapas.jpg')" }}
         aria-hidden="true"
       />
+      {/* Korte sfeerlus achter de tekst. De foto hierboven blijft staan als
+          terugval: zolang de video nog niet speelt, of wanneer iemand minder
+          beweging wil (zie prefers-reduced-motion), zie je gewoon het beeld. */}
+      <AchtergrondVideo src="/tapas-loop.mp4" poster="/tapas.jpg" />
       <div className="page-overlay" aria-hidden="true" />
 
       <div className="welcome-content">

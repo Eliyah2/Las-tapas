@@ -315,6 +315,24 @@ input:focus-visible {
   background-size: cover;
 }
 
+/* De sfeerlus ligt bovenop de foto, maar onder de waas (.page-overlay). */
+.page-video {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+/* Wie minder beweging wil ingesteld, ziet de foto in plaats van de video. */
+@media (prefers-reduced-motion: reduce) {
+  .page-video {
+    display: none;
+  }
+}
+
 .page-overlay {
   background:
     radial-gradient(circle at 88% 88%, rgba(140, 18, 25, 0.55), transparent 55%),
@@ -3400,4 +3418,77 @@ input:focus-visible {
   font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* ==========================================================================
+   Klokscherm na een bestelling
+   De gasten zien hier hoeveel tijd ze nog hebben van hun eetperiode: grote
+   cijfers op een donker scherm, en éán tik brengt ze terug bij de kaart.
+   ========================================================================== */
+
+.klok-scherm {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  /* Helemaal dekkend: het klokscherm neemt het scherm echt over, met de warme
+     gloed van de huisstijl eroverheen. */
+  background-color: var(--negro);
+  background-image:
+    radial-gradient(circle at 85% 88%, rgba(140, 18, 25, 0.55), transparent 60%),
+    radial-gradient(circle at 8% 6%, rgba(240, 180, 41, 0.16), transparent 46%);
+}
+
+.klok-kop {
+  color: var(--amarillo);
+}
+
+.klok-cijfers {
+  margin: 0;
+  color: var(--blanco);
+  font-family: var(--font-display-stack);
+  font-size: clamp(3.5rem, 17vw, 11rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-shadow: 0 0 70px rgba(240, 180, 41, 0.4);
+}
+
+.klok-cijfers-klein {
+  font-size: clamp(2.5rem, 10vw, 5.5rem);
+}
+
+.klok-uitleg {
+  max-width: 36rem;
+  margin: 0;
+  color: var(--amarillo-licht);
+  font-family: var(--font-accent-stack);
+  font-size: clamp(1.05rem, 2.3vw, 1.55rem);
+  line-height: 1.5;
+}
+
+.klok-terug {
+  margin-top: 0.5rem;
+  padding: 0.9rem 1.7rem;
+  border: 1px solid rgba(255, 253, 249, 0.32);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--blanco);
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.klok-terug:hover,
+.klok-terug:focus-visible {
+  border-color: var(--amarillo);
+  color: var(--amarillo);
 }

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { MENU } from "@/lib/menu";
 import { Divider } from "@/components/decor";
 import type { GerechtStatus } from "@/lib/voorraad-types";
+import Klok from "./klok";
 
 type CartLine = {
   /** Sleutel van de regel: het gerecht plus de persoon voor wie het is. */
@@ -20,6 +21,9 @@ type CartLine = {
 /** Twee gasten kunnen hetzelfde gerecht bestellen: elke regel is uniek per persoon. */
 const lijnSleutel = (id: string, voor: string) => `${id}__${voor}`;
 
+/** Zo lang blijft de kaart nog staan na een bestelling, voordat de klok komt. */
+const KLOK_NA_BESTELLING_MS = 20_000;
+
 /** Resterende tijd leesbaar maken: "1 uur 38 min" of "24 min". */
 function minutenTekst(minuten: number): string {
   if (minuten < 60) return `${minuten} min`;
@@ -33,6 +37,8 @@ type TafelInfo = {
   namen: string[];
   resterendeMinuten: number | null;
   laatsteRondeMinuten: number;
+  /** Wanneer de eetperiode afloopt; het klokscherm telt hiermee af. */
+  eindeOp: number | null;
 };
 
 /** De opmerking wordt per tafel onthouden, zodat hij maar één keer gezegd hoeft te worden. */
@@ -142,6 +148,9 @@ function MenuInner() {
   // De ronde die net verstuurd is; daarna gaat de kaart meteen door naar de volgende.
   const [verstuurd, setVerstuurd] = useState<number | null>(null);
   const meldingRef = useRef<HTMLDivElement>(null);
+  // Staat het klokscherm in beeld, en de timer die hem aanzet na een bestelling.
+  const [klokZichtbaar, setKlokZichtbaar] = useState(false);
+  const klokTimer = useRef<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tafelInfo, setTafelInfo] = useState<TafelInfo | null>(null);
   // Voor wie is de volgende tik op "+ Toevoegen", en welke notitie staat open?
@@ -174,6 +183,8 @@ function MenuInner() {
               typeof data.laatsteRondeMinuten === "number"
                 ? data.laatsteRondeMinuten
                 : 30,
+            eindeOp:
+              typeof data.eindeOp === "number" ? data.eindeOp : null,
           });
         })
         .catch(() => {
@@ -223,6 +234,13 @@ function MenuInner() {
     if (verstuurd === null) return;
     meldingRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [verstuurd]);
+
+  // De klok-timer opruimen als de gasten van de kaart weggaan.
+  useEffect(() => {
+    return () => {
+      if (klokTimer.current !== null) window.clearTimeout(klokTimer.current);
+    };
+  }, []);
 
   const uitverkocht = useMemo(() => {
     return MENU.flatMap((category) => category.items)
@@ -361,6 +379,13 @@ function MenuInner() {
       }
       setCart({});
       setVerstuurd(typeof data.order?.ronde === "number" ? data.order.ronde : null);
+      // Even later neemt de klok het scherm over: dan zien de gasten hoeveel
+      // tijd ze nog hebben. Een tik brengt ze terug bij de kaart.
+      if (klokTimer.current !== null) window.clearTimeout(klokTimer.current);
+      klokTimer.current = window.setTimeout(
+        () => setKlokZichtbaar(true),
+        KLOK_NA_BESTELLING_MS
+      );
     } catch {
       setError("Geen verbinding met de server.");
     } finally {
@@ -655,6 +680,16 @@ function MenuInner() {
           )}
         </div>
       </div>
+
+      {klokZichtbaar && (
+        <Klok
+          tafel={table}
+          eindeOp={tafelInfo?.eindeOp ?? null}
+          resterendeMinuten={tafelInfo?.resterendeMinuten ?? null}
+          laatsteRondeMinuten={tafelInfo?.laatsteRondeMinuten ?? 30}
+          onTerug={() => setKlokZichtbaar(false)}
+        />
+      )}
     </main>
   );
 }
