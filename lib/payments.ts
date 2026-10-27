@@ -11,13 +11,27 @@
 //    open of betaald. Is een tafel betaald en wordt er nageserveerd, dan
 //    start de volgende afrekening gewoon een nieuwe sessie.
 
-import { orderStore, type Order } from "@/lib/orders";
+import { DUUR_MINUTEN, TARIEF_PER_PERSOON, tafelStore } from "@/lib/tafel";
+
+/**
+ * Gegevens die op het bonnetje horen. Vervang de voorbeeldwaarden door de
+ * echte gegevens van het restaurant (naam, adres, KvK- en btw-nummer).
+ */
+export const RESTAURANT = {
+  naam: "Las Tapas",
+  straat: "Calle de la Tapa 12",
+  plaats: "1011 AB Amsterdam",
+  kvk: "12345678",
+  btwNummer: "NL123456789B01",
+} as const;
 
 export type BetaalStatus = "open" | "betaald";
 
 export type BetaalSessie = {
   id: string;
   table: string;
+  /** Aantal personen waarop deze rekening is gebaseerd. */
+  personen: number;
   bedrag: number; // door de server berekend, in euro's
   status: BetaalStatus;
   createdAt: number;
@@ -88,21 +102,106 @@ export function controleerKaart(
   return { gelukt: true, laatsteVier: nummer.slice(-4) };
 }
 
-/** Totaal van alle bestellingen van één tafel, opnieuw berekend door de server. */
-export function totaalPerTafel(table: string): {
-  orders: Order[];
-  totaal: number;
-} {
-  const tafel = table.trim().toLowerCase();
-  const orders = orderStore()
-    .list()
-    .filter((o) => o.table.trim().toLowerCase() === tafel)
-    .sort((a, b) => a.createdAt - b.createdAt);
-  const totaal = orders.reduce(
-    (som, o) => som + o.items.reduce((s, i) => s + i.price * i.quantity, 0),
-    0
-  );
-  return { orders, totaal };
+/* ==========================================================================
+   Bonnetje
+   ========================================================================== */
+
+/**
+ * Eén regel op het bonnetje. Bij all you can eat is dat het tarief per persoon
+ * en niet een los gerecht: de keuken serveert onbeperkt voor één prijs.
+ */
+export type Bonregel = {
+  omschrijving: string;
+  aantal: number;
+  stukprijs: number;
+  bedrag: number; // inclusief btw
+};
+
+/** Btw-specificatie per tarief, zoals op een kassabon. */
+export type BtwRegel = {
+  tarief: number; // 0.09 of 0.21
+  grondslag: number; // bedrag exclusief btw
+  btw: number;
+};
+
+export type Bonnetje = {
+  nummer: string;
+  restaurant: typeof RESTAURANT;
+  tafel: string;
+  /** Met hoeveel personen er is gegeten: daarop is de rekening gebaseerd. */
+  personen: number;
+  betaaldOp?: number;
+  laatsteVier?: string;
+  regels: Bonregel[];
+  btw: BtwRegel[];
+  totaal: number; // inclusief btw
+  totaalExclusief: number;
+};
+
+/** Bedragen afronden op eurocenten. */
+function afronden(bedrag: number): number {
+  return Math.round(bedrag * 100) / 100;
+}
+
+/**
+ * Bouwt het bonnetje van een betaalde sessie. Er staat één regel op: het
+ * all-you-can-eat-tarief per persoon voor de afgesproken eetperiode. De btw
+ * wordt eruit gehaald, want de tarieven zijn inclusief btw.
+ */
+function bonnetjeVan(sessie: BetaalSessie): Bonnetje {
+  const personen = Math.max(sessie.personen, 0);
+  const stukprijs = TARIEF_PER_PERSOON;
+  const bedrag = afronden(personen * stukprijs);
+
+  // Eten en frisdrank vallen onder het lage tarief. Zit er alcohol in het
+  // arrangement, splits het bedrag dan over 9% en 21% (zie btwTarief per gerecht).
+  const tarief = 0.09;
+  const grondslag = bedrag / (1 + tarief);
+
+  return {
+    nummer: sessie.id.slice(0, 8).toUpperCase(),
+    restaurant: RESTAURANT,
+    tafel: sessie.table,
+    personen,
+    betaaldOp: sessie.betaaldOp,
+    laatsteVier: sessie.laatsteVier,
+    regels: [
+      {
+        omschrijving: `All you can eat tapas · ${(DUUR_MINUTEN / 60)
+          .toString()
+          .replace(".", ",")} uur onbeperkt`,
+        aantal: personen,
+        stukprijs,
+        bedrag,
+      },
+    ],
+    btw: [
+      {
+        tarief,
+        grondslag: afronden(grondslag),
+        btw: afronden(bedrag - grondslag),
+      },
+    ],
+    totaal: bedrag,
+    totaalExclusief: afronden(grondslag),
+  };
+}
+
+/** Het bonnetje van een betaalsessie; nog geen bon zolang er niet betaald is. */
+export function bonnetjeVoor(id: string): Bonnetje | undefined {
+  const sessie = sessies.find((s) => s.id === id);
+  if (!sessie || sessie.status !== "betaald") return undefined;
+  return bonnetjeVan(sessie);
+}
+
+/** De rekening van een tafel: het aantal personen × het vaste tarief. */
+function rekeningBedrag(table: string): { personen: number; bedrag: number } {
+  const tafelSessie = tafelStore().get(table);
+  if (!tafelSessie) return { personen: 0, bedrag: 0 };
+  return {
+    personen: tafelSessie.personen,
+    bedrag: afronden(tafelSessie.personen * TARIEF_PER_PERSOON),
+  };
 }
 
 export function paymentStore() {
@@ -135,11 +234,12 @@ export function paymentStore() {
     start(table: string): BetaalSessie {
       const tafel = table.trim();
       const bestaand = this.openVoorTafel(tafel);
-      const { totaal } = totaalPerTafel(tafel);
+      const { personen, bedrag } = rekeningBedrag(tafel);
 
       if (bestaand) {
-        // Er kan intussen nageserveerd zijn: het bedrag wordt vers berekend.
-        bestaand.bedrag = totaal;
+        // Er kan intussen iemand bijgekomen zijn: het bedrag wordt vers berekend.
+        bestaand.personen = personen;
+        bestaand.bedrag = bedrag;
         notify();
         return bestaand;
       }
@@ -147,7 +247,8 @@ export function paymentStore() {
       const sessie: BetaalSessie = {
         id: crypto.randomUUID(),
         table: tafel,
-        bedrag: totaal,
+        personen,
+        bedrag,
         status: "open",
         createdAt: Date.now(),
       };
@@ -171,11 +272,16 @@ export function paymentStore() {
       if (!check.gelukt) return { fout: check.fout };
 
       // Bedrag opnieuw berekenen op het moment van betalen: de gast betaalt
-      // altijd de actuele rekening, nooit een bedrag uit de browser.
-      sessie.bedrag = totaalPerTafel(sessie.table).totaal;
+      // altijd het tarief voor het aantal personen dat aan tafel zit, nooit een
+      // bedrag uit de browser.
+      const { personen, bedrag } = rekeningBedrag(sessie.table);
+      sessie.personen = personen;
+      sessie.bedrag = bedrag;
       sessie.status = "betaald";
       sessie.betaaldOp = Date.now();
       sessie.laatsteVier = check.laatsteVier;
+      // De tafel is klaar: de volgende gasten beginnen met een verse eetperiode.
+      tafelStore().stop(sessie.table);
       notify();
       return { sessie };
     },

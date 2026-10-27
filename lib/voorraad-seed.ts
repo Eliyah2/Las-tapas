@@ -104,16 +104,6 @@ export const RECEPTEN_SEED: Recipe[] = [
     ],
   },
   {
-    menuItemId: "churrasco",
-    lines: [
-      { ingredientId: "entrecote", amount: 220 },
-      { ingredientId: "perejil", amount: 10 },
-      { ingredientId: "knoflook", amount: 8 },
-      { ingredientId: "aceite-oliva", amount: 30 },
-      { ingredientId: "patatas", amount: 150 },
-    ],
-  },
-  {
     menuItemId: "crema-catalana",
     lines: [
       { ingredientId: "huevos", amount: 1 },

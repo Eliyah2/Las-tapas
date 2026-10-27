@@ -72,6 +72,7 @@ export default function VoorraadPage() {
   const [sortering, setSortering] = useState<Sortering>("urgent");
   const [gerecht, setGerecht] = useState("");
   const [alleenAandacht, setAlleenAandacht] = useState(false);
+  const [alleenLeeg, setAlleenLeeg] = useState(false);
   const lijstRef = useRef<HTMLElement | null>(null);
 
   const ververs = useCallback(async () => {
@@ -242,6 +243,7 @@ export default function VoorraadPage() {
     return lijst
       .filter((product) => {
         if (alleenAandacht && voorraadNiveau(product) === "ok") return false;
+        if (alleenLeeg && voorraadNiveau(product) !== "leeg") return false;
         if (ingredienten && !(product.id in ingredienten)) return false;
         if (!term) return true;
         return (
@@ -267,7 +269,7 @@ export default function VoorraadPage() {
         if (verschil !== 0) return verschil;
         return a.stock / (a.parLevel || 1) - b.stock / (b.parLevel || 1);
       });
-  }, [overzicht, zoek, sortering, alleenAandacht, gebruik, ingredienten]);
+  }, [overzicht, zoek, sortering, alleenAandacht, alleenLeeg, gebruik, ingredienten]);
 
   const samenvatting = overzicht?.samenvatting;
   const openAanvragen = (overzicht?.aanvragen ?? []).filter(
@@ -336,6 +338,8 @@ export default function VoorraadPage() {
           waarde={String(samenvatting?.leeg ?? "…")}
           hint="niets meer op voorraad"
           toon={samenvatting && samenvatting.leeg > 0 ? "alarm" : "ok"}
+          onClick={() => setAlleenLeeg((huidig) => !huidig)}
+          actief={alleenLeeg}
         />
         <Kpi
           label="Uitverkochte gerechten"
@@ -570,19 +574,44 @@ function Kpi({
   waarde,
   hint,
   toon = "neutraal",
+  onClick,
+  actief = false,
 }: {
   label: string;
   waarde: string;
   hint: string;
   toon?: "neutraal" | "ok" | "warn" | "alarm";
+  /** Met een klikactie wordt de tegel een knop, bijvoorbeeld om te filteren. */
+  onClick?: () => void;
+  actief?: boolean;
 }) {
-  return (
-    <article className={`kpi-card ${toon}`}>
+  const inhoud = (
+    <>
       <p className="kpi-label">{label}</p>
       <p className="kpi-waarde">{waarde}</p>
       <p className="kpi-hint">{hint}</p>
-    </article>
+      {onClick && (
+        <span className="kpi-actie">
+          {actief ? "Filter uit" : "Bekijk deze producten"}
+        </span>
+      )}
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={actief}
+        className={`kpi-card kpi-knop ${toon}${actief ? " actief" : ""}`}
+      >
+        {inhoud}
+      </button>
+    );
+  }
+
+  return <article className={`kpi-card ${toon}`}>{inhoud}</article>;
 }
 
 function ProductRij({

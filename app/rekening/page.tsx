@@ -1,15 +1,23 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { formatPrice, formatTijdstip } from "@/lib/format";
 import { Rosette } from "@/components/decor";
 
-type Item = { id: string; name: string; price: number; quantity: number };
+type Item = {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  /** Naam van de gast voor wie dit gerecht is. */
+  voor?: string;
+};
 type Order = {
   id: string;
   table: string;
+  ronde: number;
   items: Item[];
   status: string;
   createdAt: number;
@@ -17,6 +25,8 @@ type Order = {
 type Sessie = {
   id: string;
   table: string;
+  /** Aantal personen waarop de rekening is gebaseerd. */
+  personen: number;
   bedrag: number;
   status: "open" | "betaald";
   createdAt: number;
@@ -46,6 +56,9 @@ function RekeningInner() {
   const table = searchParams.get("tafel") ?? "";
 
   const [sessie, setSessie] = useState<Sessie | null>(null);
+  // Alleen de rondes van deze tafelperiode horen bij deze rekening.
+  const [openSinds, setOpenSinds] = useState(0);
+  const [tariefPerPersoon, setTariefPerPersoon] = useState<number | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [fout, setFout] = useState("");
   const [laden, setLaden] = useState(true);
@@ -68,6 +81,10 @@ function RekeningInner() {
           setFout(data.error);
         } else {
           setSessie(data.sessie);
+          setOpenSinds(typeof data.openSinds === "number" ? data.openSinds : 0);
+          if (typeof data.tariefPerPersoon === "number") {
+            setTariefPerPersoon(data.tariefPerPersoon);
+          }
           setFout("");
         }
       })
@@ -91,24 +108,15 @@ function RekeningInner() {
       const tafel = table.trim().toLowerCase();
       setOrders(
         lijst
-          .filter((o) => o.table.trim().toLowerCase() === tafel)
+          .filter(
+            (o) =>
+              o.table.trim().toLowerCase() === tafel && o.createdAt > openSinds
+          )
           .sort((a, b) => a.createdAt - b.createdAt)
       );
     });
     return () => bron.close();
-  }, [tafelOntbreekt, table]);
-
-  // Kontrole op de pagina zelf: is er nageserveerd sinds de rekening startte?
-  const klantTotaal = useMemo(
-    () =>
-      orders.reduce(
-        (som, o) => som + o.items.reduce((s, i) => s + i.price * i.quantity, 0),
-        0
-      ),
-    [orders]
-  );
-  const isNageserveerd =
-    sessie !== null && sessie.status === "open" && klantTotaal !== sessie.bedrag;
+  }, [tafelOntbreekt, table, openSinds]);
 
   return (
     <main className="rekening-page">
@@ -154,16 +162,16 @@ function RekeningInner() {
               </p>
               <div className="rekening-acties">
                 <Link
-                  href={`/menu?tafel=${encodeURIComponent(sessie.table)}`}
+                  href={`/betalen/${encodeURIComponent(sessie.id)}`}
                   className="button"
                 >
-                  Nog iets bestellen
+                  Bonnetje bekijken
                 </Link>
                 <Link
-                  href={`/status?tafel=${encodeURIComponent(sessie.table)}`}
+                  href={`/menu?tafel=${encodeURIComponent(sessie.table)}`}
                   className="rekening-klein"
                 >
-                  Status van de bestelling bekijken
+                  Nog iets bestellen
                 </Link>
               </div>
             </>
@@ -189,16 +197,19 @@ function RekeningInner() {
                   {orders.map((order) => (
                     <section key={order.id}>
                       <p className="rekening-groepkop">
-                        Bestelling · {formatTijdstip(order.createdAt)}
+                        Ronde {order.ronde} · {formatTijdstip(order.createdAt)}
                       </p>
                       {order.items.map((item) => (
-                        <div className="rekening-rij" key={item.id}>
+                        <div
+                          className="rekening-rij"
+                          key={`${item.id}-${item.voor ?? ""}`}
+                        >
                           <span>
                             {item.quantity}× {item.name}
                           </span>
-                          <span>
-                            {formatPrice(item.price * item.quantity)}
-                          </span>
+                          {item.voor && (
+                            <span className="rekening-voor">{item.voor}</span>
+                          )}
                         </div>
                       ))}
                     </section>
@@ -208,20 +219,24 @@ function RekeningInner() {
 
               <div className="rekening-totaal">
                 <div>
-                  <small>Te betalen (door de server berekend)</small>
+                  <small>
+                    All you can eat · {sessie.personen}{" "}
+                    {sessie.personen === 1 ? "persoon" : "personen"}
+                    {tariefPerPersoon !== null
+                      ? ` × ${formatPrice(tariefPerPersoon)}`
+                      : ""}
+                  </small>
                   <span className="rekening-bedrag">
                     {formatPrice(sessie.bedrag)}
                   </span>
                 </div>
-                {isNageserveerd && (
-                  <button
-                    type="button"
-                    onClick={startRekening}
-                    className="button rekening-ververs"
-                  >
-                    Rekening bijwerken
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={startRekening}
+                  className="button rekening-ververs"
+                >
+                  Bijwerken
+                </button>
               </div>
 
               <div className="rekening-acties">

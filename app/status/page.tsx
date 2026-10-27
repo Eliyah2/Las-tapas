@@ -3,13 +3,23 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { formatPrice, formatTijdstip } from "@/lib/format";
+import { formatTijdstip } from "@/lib/format";
 
 type Status = "nieuw" | "bereiden" | "klaar";
-type Item = { id: string; name: string; price: number; quantity: number };
+type Item = {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  /** Naam van de gast voor wie dit gerecht is. */
+  voor?: string;
+  /** Opmerking van de gast, bijvoorbeeld een allergie. */
+  opmerking?: string;
+};
 type Order = {
   id: string;
   table: string;
+  ronde: number;
   items: Item[];
   note?: string;
   status: Status;
@@ -125,13 +135,22 @@ function StatusInner() {
             {orders.map((o) => (
               <article key={o.id} className="status-order">
                 <p className="status-tijd">
-                  Besteld om {formatTijdstip(o.createdAt)}
+                  Ronde {o.ronde} · besteld om {formatTijdstip(o.createdAt)}
                 </p>
                 <ul className="status-items">
                   {o.items.map((i) => (
-                    <li key={i.id}>
-                      <b>{i.quantity}×</b> {i.name}
-                      <span>{formatPrice(i.price * i.quantity)}</span>
+                    <li key={`${i.id}-${i.voor ?? ""}`}>
+                      <span className="status-item-naam">
+                        <b>{i.quantity}×</b> {i.name}
+                        {i.voor && (
+                          <span className="status-item-voor">{i.voor}</span>
+                        )}
+                      </span>
+                      {i.opmerking && (
+                        <span className="status-item-opmerking">
+                          Let op: {i.opmerking}
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ul>
