@@ -19,8 +19,9 @@ export default function QrPage() {
         </header>
 
         <p className="qr-description">
-          Vul het tafelnummer in, print de QR-code en plak hem op tafel. Door
-          hem te scannen opent de menukaart met het juiste tafelnummer.
+          Vul het tafelnummer in en zet de iPad van die tafel op deze menukaart:
+          scan de code één keer, of open de link. De gasten bestellen daarna op
+          de iPad, dus niet op hun eigen telefoon.
         </p>
 
         <label className="qr-label" htmlFor="tafel">
@@ -43,7 +44,10 @@ export default function QrPage() {
               className="qr-image"
             />
             <p className="qr-table">Tafel {table}</p>
-            <p className="qr-link">Linkt naar /welkom?tafel={table}</p>
+            <p className="qr-link">
+              Opent de welkomstpagina van tafel {table}; zet deze op de iPad van
+              die tafel.
+            </p>
             <a
               href={qrSrc}
               download={`qr-tafel-${table}.png`}

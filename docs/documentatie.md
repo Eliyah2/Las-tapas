@@ -19,12 +19,12 @@
 
 Een restaurant waar de gast **zonder bediening** kan bestellen:
 
-1. De gast scant een **QR-code op tafel**.
-2. Er opent een welkomstpagina met het tafelnummer er al in.
-3. De gast bekijkt de **menukaart** en zet gerechten in een mandje.
-4. De bestelling gaat naar de keuken; de gast krijgt een bevestiging.
+1. Elke tafel heeft een **iPad van de zaak** met daarop de menukaart van die tafel; de gasten bestellen dus niet op hun eigen telefoon.
+2. De welkomstpagina toont het tafelnummer; de gasten kiezen met hoeveel personen ze eten en vullen hun namen in.
+3. De gasten bekijken de **menukaart** en zetten gerechten in een mandje; per regel geven ze door voor wie het gerecht is, met ruimte voor een opmerking zoals een allergie.
+4. De bestelling gaat naar de keuken; de gasten zien een bevestiging en kunnen meteen door voor de volgende ronde.
 5. Het **keukenscherm** toont alle bestellingen live en de kok zet de status op *nieuw → in bereiding → klaar*.
-6. De zaak kan per tafel een **QR-code genereren en printen**.
+6. De zaak kan per tafel een **QR-code genereren** om de iPad van die tafel op de juiste menukaart te zetten, of als kaartje te printen.
 7. De **voorraad** wordt bijgehouden: bij elke bestelling gaan de ingrediënten van de voorraad af, gerechten die niet meer gemaakt kunnen worden staan op de menukaart als *uitverkocht*, en leveringen en verliezen komen in een mutatielog.
 
 **Doel van de opdracht:** leren werken met een modern webframework, een eigen huisstijl uitwerken en een volledige gebruikersstroom van begin tot eind bouwen.
@@ -35,8 +35,8 @@ Een restaurant waar de gast **zonder bediening** kan bestellen:
 
 | Eis | Invulling in het project |
 | --- | --- |
-| Werkt op mobiel én desktop | Alle pagina's zijn responsive (CSS Grid + media queries) |
-| Bestellen zonder account | Geen login nodig; het tafelnummer uit de QR-code is de context |
+| Werkt op mobiel én desktop | Alle pagina's zijn responsive (CSS Grid + media queries); aan tafel draait het op de iPad van de zaak |
+| Bestellen zonder account | Geen login nodig; het tafelnummer van de iPad aan tafel is de context |
 | Bestelling komt live bij de keuken | Server-Sent Events (`/api/orders/stream`) pusht elke wijziging |
 | Eigen huisstijl met Spaanse uitstraling | Zwart/wit met Spaans rood-geel, warme menukaart-typografie en één tapasfoto als achtergrond |
 | Duidelijke feedback voor de gebruiker | Mandje onderaan, prijstotaal, bevestigingskaart, foutmeldingen |
@@ -149,7 +149,7 @@ Alle onderstaande beelden komen uit de automatische controle (`docs/checks/scree
 | Pagina | Desktop (1440×900) | Mobiel (390×844) |
 | --- | --- | --- |
 | Home (foto-hero met tegelband) | ![Home op desktop](screenshots/home-desktop.png) | ![Home op mobiel](screenshots/home-mobiel.png) |
-| Welkom na QR-scan | ![Welkom op desktop](screenshots/welkom-desktop.png) | ![Welkom op mobiel](screenshots/welkom-mobiel.png) |
+| Welkom op de iPad aan tafel | ![Welkom op desktop](screenshots/welkom-desktop.png) | ![Welkom op mobiel](screenshots/welkom-mobiel.png) |
 | Menukaart | ![Menukaart op desktop](screenshots/menu-desktop.png) | ![Menukaart op mobiel](screenshots/menu-mobiel.png) |
 | Keukenscherm | ![Keukenscherm op desktop](screenshots/keuken-desktop.png) | ![Keukenscherm op mobiel](screenshots/keuken-mobiel.png) |
 | Voorraadscherm (manager) | ![Voorraad op desktop](screenshots/voorraad-desktop.png) | ![Voorraad op mobiel](screenshots/voorraad-mobiel.png) |
@@ -167,7 +167,7 @@ Goedkeuring van een grote uitgifte, gezien als hoofdchef (het scherm dat de kok 
 ## 5. Pagina's en gebruikersstroom
 
 ```
-QR-code op tafel
+iPad van de zaak aan tafel
       │
       ▼
 /welkom?tafel=5   ──►  /menu?tafel=5  ──►  POST /api/orders  ──►  bevestiging
@@ -187,7 +187,7 @@ QR-code op tafel
 | `/keuken` | `app/keuken/page.tsx` | Keuken | Live overzicht in drie kolommen met statusknoppen |
 | `/voorraad` | `app/voorraad/page.tsx` | Manager | Voorraad bijhouden: kerncijfers, producten, mutaties, recepten, CSV, drempel instellen, producten zoeken en filteren op gerecht |
 | `/uitgifte` | `app/uitgifte/page.tsx` | Keuken | Zien wat er is en in één tik afboeken wat je pakt, rolkeuze, aanvragen voor de hoofdchef, filter op gerecht en een lijst van vandaag met een knop om iets terug te zetten |
-| `/qr` | `app/qr/page.tsx` | Zaak | QR-code per tafel maken en downloaden als PNG |
+| `/qr` | `app/qr/page.tsx` | Zaak | QR-code per tafel maken om de iPad van die tafel op de menukaart te zetten (of te printen) |
 
 Elke bestelling zet de voorraad in beweging:
 
@@ -402,7 +402,7 @@ app/
   layout.tsx             root-layout, metadata en de lettertypes (next/font)
   globals.css            volledige huisstijl (kleuren, decoratie, alle pagina's)
   page.tsx               homepagina met tapasfoto
-  welkom/page.tsx        welkomstpagina na QR-scan
+  welkom/page.tsx        welkomstpagina op de iPad aan tafel
   menu/page.tsx          menukaart + mandje + bestellen
   keuken/page.tsx        keukenscherm met live updates
   qr/page.tsx            QR-generator
@@ -553,7 +553,7 @@ node docs/checks/gerecht-check.js      # filteren en sorteren op gerecht
 | 6 | Open `/keuken` in een tweede scherm | Nieuwe bestelling verschijnt direct in de kolom *Nieuw* |
 | 7 | Status op *In bereiding* en daarna *Klaar* | De kaart verhuist live naar de volgende kolom |
 | 8 | Verbreek de verbinding | De badge toont "Verbinding verbroken…" |
-| 9 | Maak een QR voor tafel 12 en scan hem | De welkomstpagina opent met tafel 12 |
+| 9 | Maak een QR voor tafel 12 en open hem op de iPad | De welkomstpagina opent met tafel 12 |
 | 10 | Test op smalle weergave (mobiel) | Alles blijft leesbaar, niets loopt buiten het scherm |
 | 11 | Open `/voorraad` | Kerncijfers, 30 producten met status en het mutatielog laden |
 | 12 | Boek een levering bij een product | De voorraad stijgt en de mutatie staat in het log |
@@ -584,7 +584,7 @@ node docs/checks/gerecht-check.js      # filteren en sorteren op gerecht
 
 **Wat goed ging**
 
-* De hele stroom van QR-scan tot keukenscherm werkt zonder database of externe diensten.
+* De hele stroom van de iPad aan tafel tot het keukenscherm werkt zonder database of externe diensten.
 * Door de huisstijl in één CSS-bestand te zetten, kon de nieuwe Spaanse stijl in één keer over alle pagina's worden doorgevoerd.
 * Prijzen worden server-side bepaald; dat is meteen ook een veiligheidsles over "nooit de client vertrouwen".
 

@@ -35,7 +35,7 @@ const kaushan = Kaushan_Script({
 
 export const metadata: Metadata = {
   title: "Las Tapas · Bestel aan tafel",
-  description: "Scan de QR-code aan tafel en bestel direct: de keuken ontvangt je bestelling live.",
+  description: "Bestel aan tafel op de iPad van Las Tapas: onbeperkt tapas, één vast bedrag per persoon.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

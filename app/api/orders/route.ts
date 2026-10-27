@@ -3,7 +3,21 @@ import { orderStore } from "@/lib/orders";
 import { findMenuItem } from "@/lib/menu";
 import { voorraadStore } from "@/lib/inventory";
 
-type IncomingItem = { id: string; quantity: number };
+type IncomingItem = {
+  id: string;
+  quantity: number;
+  /** Naam van de gast voor wie het gerecht is. */
+  voor?: string;
+  /** Opmerking bij dit gerecht, bijvoorbeeld een allergie. */
+  opmerking?: string;
+};
+
+/** Tekst netjes maken: spaties eraf, lengte begrensd, leeg wordt undefined. */
+function schoonTekst(waarde: unknown, max: number): string | undefined {
+  if (typeof waarde !== "string") return undefined;
+  const tekst = waarde.trim().slice(0, max);
+  return tekst || undefined;
+}
 
 export async function POST(request: Request) {
   let body: { table?: string; items?: IncomingItem[]; note?: string };
@@ -50,6 +64,8 @@ export async function POST(request: Request) {
       name: menuItem.name,
       price: menuItem.price,
       quantity,
+      voor: schoonTekst(item.voor, 20),
+      opmerking: schoonTekst(item.opmerking, 80),
     });
   }
 
@@ -57,10 +73,10 @@ export async function POST(request: Request) {
   // `verbruik` boekt alles of niets, dus er verdwijnt nooit voorraad zonder order.
   // Registreert de keuken haar uitgiftes zelf, dan wordt er alleen gecontroleerd.
   const voorraad = voorraadStore();
-  const verbruik = await voorraad.verbruik(
+  const verbruik = voorraad.verbruik(
     orderItems.map((item) => ({ id: item.id, quantity: item.quantity })),
     table,
-    await voorraad.rekentAutomatischAf()
+    voorraad.rekentAutomatischAf()
   );
 
   if (!verbruik.gelukt) {
@@ -74,7 +90,7 @@ export async function POST(request: Request) {
   }
 
   const store = orderStore();
-  const order = await store.add({ table, items: orderItems, note });
+  const order = store.add({ table, items: orderItems, note });
 
   return NextResponse.json(
     { order, voorraadMutaties: verbruik.mutaties.length },

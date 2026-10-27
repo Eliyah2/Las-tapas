@@ -14,6 +14,6 @@ export async function POST(request: Request) {
     // Geen body: geen probleem, de mutatie krijgt dan geen rol mee.
   }
 
-  await voorraadStore().reset(isRol(door) ? door : undefined);
+  voorraadStore().reset(isRol(door) ? door : undefined);
   return NextResponse.json({ ok: true });
 }

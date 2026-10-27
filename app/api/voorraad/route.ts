@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/voorraad — het volledige voorraadoverzicht. */
 export async function GET() {
-  return NextResponse.json(await voorraadStore().overzicht());
+  return NextResponse.json(voorraadStore().overzicht());
 }
 
 /** POST /api/voorraad — een nieuw product toevoegen. */
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const product = await voorraadStore().voegProductToe({
+    const product = voorraadStore().voegProductToe({
       name: body.name,
       unit,
       stock: Number(body.stock) || 0,

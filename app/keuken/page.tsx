@@ -2,12 +2,20 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { formatPrice } from "@/lib/format";
 
 type Status = "nieuw" | "bereiden" | "klaar";
-type Item = { id: string; name: string; price: number; quantity: number };
+type Item = {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  /** Naam van de gast voor wie dit gerecht is. */
+  voor?: string;
+  /** Opmerking van de gast, bijvoorbeeld een allergie. */
+  opmerking?: string;
+};
 type Order = {
-  id: string; table: string; items: Item[]; note?: string;
+  id: string; table: string; ronde: number; items: Item[]; note?: string;
   status: Status; createdAt: number; updatedAt: number;
 };
 
@@ -18,7 +26,6 @@ const COLUMNS: { status: Status; title: string; dot: string; next: Status; label
   { status: "klaar", title: "Gereed voor uitserveren", dot: "bg-emerald-400", next: "nieuw", label: "Terug naar nieuw", btn: "ring-1 ring-white/25 text-white/80" },
 ];
 
-const total = (o: Order) => o.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 const waitColor = (min: number) =>
   min >= 15 ? "text-red-400" : min >= 8 ? "text-amber-400" : "text-white/70";
 
@@ -68,9 +75,9 @@ export default function KitchenPage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col bg-[#0e1116] text-[#eef0f3]">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-6 py-4">
-        <h1 className="text-3xl font-extrabold">Las Tapas <span className="text-lg font-medium text-white/50">Keuken</span></h1>
+    <main className="keuken-page flex min-h-dvh flex-col bg-[#17110f] text-[#eef0f3]">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-[#f0b429] bg-[#8c1219] px-6 py-4">
+        <h1 className="text-3xl font-extrabold text-white">Las Tapas <span className="text-lg font-medium text-white/70">Keuken</span></h1>
         <div className="flex flex-wrap items-center gap-3 text-base font-semibold">
           <Link href="/uitgifte" className="rounded-xl px-4 py-2.5 ring-1 ring-white/15 hover:bg-white/5">Pakken</Link>
           <Link href="/voorraad" className="rounded-xl px-4 py-2.5 ring-1 ring-white/15 hover:bg-white/5">
@@ -90,7 +97,7 @@ export default function KitchenPage() {
           const list = orders.filter((o) => o.status === col.status).sort((a, b) => a.createdAt - b.createdAt);
           return (
             <section key={col.status} className="rounded-3xl bg-white/[0.03] p-3">
-              <h2 className="mb-3 flex items-center justify-between px-1 text-xl font-bold">
+              <h2 className="mb-3 flex items-center justify-between px-1 text-xl font-bold text-white">
                 <span className="flex items-center gap-3"><i className={`size-3 rounded-full ${col.dot}`} />{col.title}</span>
                 <span className="rounded-full bg-white/10 px-3 text-base tabular-nums">{list.length}</span>
               </h2>
@@ -100,14 +107,32 @@ export default function KitchenPage() {
                   // Wachttijd: sinds binnenkomst, of bij "klaar" sinds het klaar is.
                   const min = now ? Math.floor((now - (o.status === "klaar" ? o.updatedAt : o.createdAt)) / 60_000) : 0;
                   return (
-                    <article key={o.id} className={`rounded-2xl border bg-[#171c23] p-5 ${min >= 15 ? "border-red-500/70" : "border-white/10"}`}>
-                      <div className="flex items-end justify-between border-b-2 border-dashed border-white/15 pb-4">
-                        <p className="text-5xl font-extrabold leading-none tabular-nums"><span className="block text-sm font-medium text-white/50">Tafel</span>{o.table}</p>
+                    <article key={o.id} className={`rounded-2xl border bg-[#241b18] p-5 ${min >= 15 ? "border-red-500/70" : "border-white/10"}`}>
+                      <div className="flex items-start justify-between border-b-2 border-dashed border-white/15 pb-4">
+                        <div>
+                          <p className="text-5xl font-extrabold leading-none tabular-nums"><span className="block text-sm font-medium text-white/50">Tafel</span>{o.table}</p>
+                          <span className="mt-3 inline-block rounded-full bg-amber-400/15 px-3 py-1 text-sm font-bold text-amber-300">Ronde {o.ronde}</span>
+                        </div>
                         <p className={`text-2xl font-bold tabular-nums ${waitColor(min)}`}>{min < 1 ? "net binnen" : `${min} min`}</p>
                       </div>
-                      <ul className="mt-4 space-y-2 text-xl">
+                      <ul className="mt-4 space-y-3 text-xl">
                         {o.items.map((i) => (
-                          <li key={i.id}><b className="mr-2 text-amber-400">{i.quantity}×</b>{i.name}</li>
+                          <li key={`${i.id}-${i.voor ?? ""}`}>
+                            <span>
+                              <b className="mr-2 text-amber-400">{i.quantity}×</b>
+                              {i.name}
+                            </span>
+                            {i.voor && (
+                              <span className="ml-3 align-middle rounded-full bg-white/10 px-3 py-1 text-base font-bold text-white/85">
+                                {i.voor}
+                              </span>
+                            )}
+                            {i.opmerking && (
+                              <span className="mt-2 block rounded-xl bg-red-500/20 px-3 py-2 text-base font-bold text-red-100">
+                                Let op · {i.opmerking}
+                              </span>
+                            )}
+                          </li>
                         ))}
                       </ul>
                       {o.note && <p className="mt-4 rounded-xl bg-amber-400/10 px-4 py-3 text-amber-200">{o.note}</p>}
@@ -128,7 +153,7 @@ export default function KitchenPage() {
       </div>
 
       <footer className="border-t border-white/10 px-6 py-3 text-white/60">
-        Totaal vandaag: {orders.length} bestellingen, {formatPrice(orders.reduce((s, o) => s + total(o), 0))}
+        Vandaag: {orders.length} bestellingen
       </footer>
     </main>
   );

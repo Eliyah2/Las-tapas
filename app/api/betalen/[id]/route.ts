@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { paymentStore, type KaartGegevens } from "@/lib/payments";
+import {
+  bonnetjeVoor,
+  paymentStore,
+  type KaartGegevens,
+} from "@/lib/payments";
 
 /**
  * Opvragen van één betaalsessie, zodat de betaalpagina het bedrag altijd
@@ -10,13 +14,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const sessie = await paymentStore().get(id);
+  const sessie = paymentStore().get(id);
 
   if (!sessie) {
     return NextResponse.json({ error: "Betaalsessie niet gevonden" }, { status: 404 });
   }
 
-  return NextResponse.json({ sessie });
+  // Is er betaald, dan hoort het bonnetje (met btw-specificatie) erbij.
+  return NextResponse.json({ sessie, bonnetje: bonnetjeVoor(id) ?? null });
 }
 
 /**
@@ -52,7 +57,7 @@ export async function PATCH(
     );
   }
 
-  const resultaat = await paymentStore().betaal(id, kaart);
+  const resultaat = paymentStore().betaal(id, kaart);
   if (resultaat.fout || !resultaat.sessie) {
     return NextResponse.json(
       { error: resultaat.fout ?? "Betalen mislukt" },
@@ -60,5 +65,8 @@ export async function PATCH(
     );
   }
 
-  return NextResponse.json({ sessie: resultaat.sessie });
+  return NextResponse.json({
+    sessie: resultaat.sessie,
+    bonnetje: bonnetjeVoor(id) ?? null,
+  });
 }
