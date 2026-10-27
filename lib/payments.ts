@@ -20,6 +20,8 @@ export type BetaalStatus = "open" | "betaald";
 export type BetaalSessie = {
   id: string;
   table: string;
+  /** Aantal personen waarop deze rekening is gebaseerd. */
+  personen: number;
   bedrag: number; // door de server berekend, in euro's
   status: BetaalStatus;
   createdAt: number;

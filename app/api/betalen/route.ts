@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
-import { paymentStore, totaalPerTafel } from "@/lib/payments";
+import { paymentStore } from "@/lib/payments";
+import { TARIEF_INFO, tafelStore } from "@/lib/tafel";
 
 /**
  * Start (of hervat) de afrekening van een tafel.
- * Het bedrag wordt hier server-side berekend: de browser stuurt alleen
- * het tafelnummer mee, nooit een bedrag.
+ * Bij all you can eat is de rekening het aantal personen × het vaste tarief;
+ * dat bedrag wordt hier server-side berekend uit de tafelsessie, nooit uit de
+ * browser.
  */
 export async function POST(request: Request) {
   let body: { table?: string };
@@ -23,7 +25,9 @@ export async function POST(request: Request) {
   const { orders } = await totaalPerTafel(table);
   if (orders.length === 0) {
     return NextResponse.json(
-      { error: `Er zijn geen bestellingen bekend voor tafel ${table}` },
+      {
+        error: `Tafel ${table} is nog niet gestart. Start de tafel op de iPad of vraag de bediening.`,
+      },
       { status: 404 }
     );
   }

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Divider } from "@/components/decor";
+import { DUUR_MINUTEN } from "@/lib/tafel";
+import GastenKiezer from "./gasten-kiezer";
 
 export const metadata: Metadata = {
   title: "Welkom bij Las Tapas",
-  description: "Scan de QR-code aan tafel en bestel direct: de keuken ontvangt je bestelling live.",
+  description: "Bestel aan tafel op de iPad van Las Tapas: onbeperkt tapas voor één vast bedrag per persoon.",
 };
 
 export default async function WelcomePage({
@@ -14,6 +15,7 @@ export default async function WelcomePage({
 }) {
   const { tafel } = await searchParams;
   const table = tafel?.trim() || "?";
+  const duur = `${(DUUR_MINUTEN / 60).toString().replace(".", ",")} uur`;
 
   return (
     <main className="welcome-page">
@@ -30,16 +32,12 @@ export default async function WelcomePage({
         <h1>Bienvenidos</h1>
         <Divider />
         <p className="welcome-description">
-          Welkom bij Las Tapas. Bestel vanaf je eigen telefoon, je bestelling
-          gaat direct naar de keuken, zonder wachten op de bediening.
+          Welkom bij Las Tapas. Onbeperkt tapas, {duur} lang, voor één vast
+          bedrag per persoon. Bestel op de iPad van de zaak; je bestelling gaat
+          meteen naar de keuken.
         </p>
         <p className="welcome-table">Tafel {table}</p>
-        <Link
-          href={`/menu?tafel=${encodeURIComponent(table)}`}
-          className="button welcome-button"
-        >
-          Bekijk de menukaart <span aria-hidden="true">&nbsp;↗</span>
-        </Link>
+        <GastenKiezer tafel={table} />
       </div>
     </main>
   );

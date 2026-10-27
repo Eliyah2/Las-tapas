@@ -16,11 +16,17 @@ export type OrderItem = {
   name: string;
   price: number;
   quantity: number;
+  /** Voor wie het gerecht is: de naam van de gast aan tafel. */
+  voor?: string;
+  /** Opmerking per gerecht, bijvoorbeeld "zonder ui (allergie)". */
+  opmerking?: string;
 };
 
 export type Order = {
   id: string;
   table: string;
+  /** De hoeveelste bestelling dit is aan deze tafel: ronde 1, 2, 3, ... */
+  ronde: number;
   items: OrderItem[];
   note?: string;
   status: OrderStatus;
