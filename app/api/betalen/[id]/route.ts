@@ -21,7 +21,7 @@ export async function GET(
   }
 
   // Is er betaald, dan hoort het bonnetje (met btw-specificatie) erbij.
-  return NextResponse.json({ sessie, bonnetje: bonnetjeVoor(id) ?? null });
+  return NextResponse.json({ sessie, bonnetje: bonnetjeVoor(sessie) ?? null });
 }
 
 /**
@@ -67,6 +67,6 @@ export async function PATCH(
 
   return NextResponse.json({
     sessie: resultaat.sessie,
-    bonnetje: bonnetjeVoor(id) ?? null,
+    bonnetje: bonnetjeVoor(resultaat.sessie) ?? null,
   });
 }

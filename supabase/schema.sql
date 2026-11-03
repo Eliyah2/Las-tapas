@@ -231,11 +231,15 @@ create table if not exists public.recipe_lines (
   primary key (menu_item_id, ingredient_id)
 );
 
--- Betaalsessies per table. The amount is always recalculated server-side from
--- the orders of that table and never accepted from the browser.
+-- Betaalsessies per table. All you can eat: the amount is the number of
+-- persons at that table times the fixed tariff, always recalculated server-side
+-- and never accepted from the browser.
 create table if not exists public.payment_sessions (
   id uuid primary key default gen_random_uuid(),
   table_number text not null check (char_length(btrim(table_number)) between 1 and 30),
+  -- The number of persons the bill is based on, for the bill itself and for the
+  -- receipt ("N x all you can eat").
+  personen integer not null default 1 check (personen between 0 and 40),
   amount numeric(10, 2) not null default 0 check (amount >= 0),
   status text not null default 'open' check (status in ('open', 'betaald')),
   -- Only the last four digits of the card are kept; the full number never
@@ -245,6 +249,13 @@ create table if not exists public.payment_sessions (
   paid_at timestamptz,
   constraint payment_sessions_paid_check check (status = 'open' or paid_at is not null)
 );
+
+-- Bestaat de tabel al uit een eerdere versie van dit bestand, dan ontbreekt de
+-- kolom personen: deze regel zet hem er alsnog bij. Veilig om opnieuw te
+-- draaien.
+alter table public.payment_sessions
+  add column if not exists personen integer not null default 1
+  check (personen between 0 and 40);
 
 -- The two things the manager can change (Instellingen in lib/inventory.ts).
 -- Single-row table: the primary key plus its check make a second row impossible.
