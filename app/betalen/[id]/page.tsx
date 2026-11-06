@@ -277,7 +277,13 @@ export default function BetalenPage() {
                     <span>{formatPrice(bon.totaal)}</span>
                   </div>
                   <div className="bon-rij zacht">
-                    <span>{bon.methode === "ideal" ? `Betaald met iDEAL (${bon.bank})` : "Betaald met kaart"}</span>
+                    <span>
+                      {bon.methode === "ideal"
+                        ? bon.bank
+                          ? `Betaald met iDEAL (${bon.bank})`
+                          : "Betaald met iDEAL"
+                        : "Betaald met kaart"}
+                    </span>
                     {bon.methode !== "ideal" && <span>•••• {bon.laatsteVier}</span>}
                   </div>
                 </div>
@@ -288,7 +294,12 @@ export default function BetalenPage() {
               </div>
             ) : (
               <p className="pay-betaald-uitleg">
-                Tafel {sessie.table} is afgerekend {sessie.methode === "ideal" ? `met iDEAL (${sessie.bank})` : <>met kaart <b>•••• {sessie.laatsteVier}</b></>}
+                Tafel {sessie.table} is afgerekend{" "}
+                {sessie.methode === "ideal" ? (
+                  sessie.bank ? `met iDEAL (${sessie.bank})` : "met iDEAL"
+                ) : (
+                  <>met kaart <b>•••• {sessie.laatsteVier}</b></>
+                )}
                 {sessie.betaaldOp
                   ? ` om ${formatTijdstip(sessie.betaaldOp)}`
                   : ""}

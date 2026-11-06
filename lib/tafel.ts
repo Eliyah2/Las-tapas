@@ -9,22 +9,42 @@
 // restaurant op één server. Betalen sluit de tafel af, zodat de volgende gasten
 // weer met een verse periode beginnen.
 
-/** Vast tarief per persoon, inclusief eten en frisdrank. Pas dit hier aan. */
-export const TARIEF_PER_PERSOON = 27.5;
+// De arrangementen staan in lib/arrangementen.ts, zonder de opslag hieronder.
+// Zo gebruikt het welkomstscherm dezelfde lijst en prijzen als de server.
+import {
+  STANDAARD_ARRANGEMENT,
+  arrangementVan,
+  type Arrangement,
+  type ArrangementId,
+} from "@/lib/arrangementen";
 
-/** Hoe lang een tafel mag eten, in minuten (2,5 uur). */
-export const DUUR_MINUTEN = 150;
+export {
+  ARRANGEMENTEN,
+  STANDAARD_ARRANGEMENT,
+  arrangementVan,
+  laagstePrijsPerPersoon,
+  type Arrangement,
+  type ArrangementId,
+} from "@/lib/arrangementen";
+
+/** Tarief en duur van het standaardarrangement (3 uur, zonder drinken). */
+export const TARIEF_PER_PERSOON =
+  arrangementVan(STANDAARD_ARRANGEMENT).prijsPerPersoon;
+export const DUUR_MINUTEN = arrangementVan(STANDAARD_ARRANGEMENT).minuten;
 
 /**
  * In de laatste fase van de periode kan er niets meer bijbesteld worden, zodat
  * de keuken op tijd kan sluiten. De gasten zien dan een waarschuwing.
  */
-export const LAATSTE_RONDE_MINUTEN = 30;
+export const LAATSTE_RONDE_MINUTEN =
+  arrangementVan(STANDAARD_ARRANGEMENT).laatsteRondeMinuten;
 
 export type TafelSessie = {
   /** Het tafelnummer zoals het op de QR-code staat. */
   tafel: string;
   personen: number;
+  /** Welk arrangement deze tafel heeft: dat bepaalt de duur en het tarief. */
+  arrangement: ArrangementId;
   /** De namen van de gasten, in dezelfde volgorde als de personen. */
   namen: string[];
   gestartOp: number;
@@ -93,10 +113,12 @@ export function tafelStore() {
       tafel: string,
       personen: number,
       namen?: string[],
-      herstart = false
+      herstart = false,
+      arrangementId?: string
     ): TafelSessie {
       const bestaand = sessies.find((s) => sleutel(s.tafel) === sleutel(tafel));
       const aantal = Math.min(Math.max(Math.round(personen) || 1, 1), 40);
+      const arrangement = arrangementVan(arrangementId ?? bestaand?.arrangement);
       // Namen die niet zijn meegegeven blijven staan, zodat een tafel die al
       // loopt zijn namen niet verliest.
       const nieuweNamen = normaliseerNamen(namen ?? bestaand?.namen, aantal);
@@ -104,6 +126,12 @@ export function tafelStore() {
       if (bestaand) {
         bestaand.personen = aantal;
         bestaand.namen = nieuweNamen;
+        // Een ander arrangement hoort bij een nieuwe eetperiode: anders zou een
+        // tafel voor 2 uur betalen en toch 3 uur kunnen eten.
+        if (arrangement.id !== bestaand.arrangement) {
+          bestaand.arrangement = arrangement.id;
+          bestaand.gestartOp = Date.now();
+        }
         if (herstart) bestaand.gestartOp = Date.now();
         notify();
         return bestaand;
@@ -112,6 +140,7 @@ export function tafelStore() {
       const sessie: TafelSessie = {
         tafel: tafel.trim(),
         personen: aantal,
+        arrangement: arrangement.id,
         namen: nieuweNamen,
         gestartOp: Date.now(),
       };
@@ -140,27 +169,40 @@ export function tafelStore() {
   };
 }
 
-/** Hoeveel minuten een sessie nog loopt (negatief als de tijd om is). */
-export function resterendeMinuten(sessie: TafelSessie, nu = Date.now()): number {
-  const einde = sessie.gestartOp + DUUR_MINUTEN * 60_000;
-  return Math.ceil((einde - nu) / 60_000);
+/** Het moment waarop de eetperiode van een tafel afloopt. */
+export function eindeVanSessie(sessie: TafelSessie): number {
+  return sessie.gestartOp + arrangementVan(sessie.arrangement).minuten * 60_000;
 }
 
-/** Wat de rekening van deze tafel is: personen × het vaste tarief. */
+/** Hoeveel minuten een sessie nog loopt (negatief als de tijd om is). */
+export function resterendeMinuten(sessie: TafelSessie, nu = Date.now()): number {
+  return Math.ceil((eindeVanSessie(sessie) - nu) / 60_000);
+}
+
+/** Wat de rekening van deze tafel is: personen × het tarief van het arrangement. */
 export function rekeningVanTafel(tafel: string): {
   sessie?: TafelSessie;
+  arrangement: Arrangement;
   personen: number;
   tariefPerPersoon: number;
   totaal: number;
 } {
   const sessie = tafelStore().get(tafel);
+  const arrangement = arrangementVan(sessie?.arrangement);
   if (!sessie) {
-    return { personen: 0, tariefPerPersoon: TARIEF_PER_PERSOON, totaal: 0 };
+    return {
+      arrangement,
+      personen: 0,
+      tariefPerPersoon: arrangement.prijsPerPersoon,
+      totaal: 0,
+    };
   }
   return {
     sessie,
+    arrangement,
     personen: sessie.personen,
-    tariefPerPersoon: TARIEF_PER_PERSOON,
-    totaal: Math.round(sessie.personen * TARIEF_PER_PERSOON * 100) / 100,
+    tariefPerPersoon: arrangement.prijsPerPersoon,
+    totaal:
+      Math.round(sessie.personen * arrangement.prijsPerPersoon * 100) / 100,
   };
 }

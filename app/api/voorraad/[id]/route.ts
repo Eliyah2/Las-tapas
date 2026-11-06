@@ -64,7 +64,7 @@ export async function PATCH(
       );
     }
 
-    const movement = store.boek(
+    const movement = await store.boek(
       id,
       {
         delta: body.delta,
@@ -80,7 +80,7 @@ export async function PATCH(
     return NextResponse.json({ movement });
   }
 
-  const product = store.werkProductBij(id, {
+  const product = await store.werkProductBij(id, {
     name: body.name,
     unit: body.unit,
     parLevel: body.parLevel,
@@ -100,7 +100,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const verwijderd = voorraadStore().verwijderProduct(id);
+  const verwijderd = await voorraadStore().verwijderProduct(id);
 
   if (!verwijderd) {
     return NextResponse.json({ error: "Product niet gevonden" }, { status: 404 });

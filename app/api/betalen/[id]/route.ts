@@ -14,14 +14,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const sessie = paymentStore().get(id);
+  const sessie = await paymentStore().get(id);
 
   if (!sessie) {
     return NextResponse.json({ error: "Betaalsessie niet gevonden" }, { status: 404 });
   }
 
   // Is er betaald, dan hoort het bonnetje (met btw-specificatie) erbij.
-  return NextResponse.json({ sessie, bonnetje: bonnetjeVoor(id) ?? null });
+  return NextResponse.json({ sessie, bonnetje: bonnetjeVoor(sessie) ?? null });
 }
 
 /**
@@ -35,7 +35,7 @@ export async function PATCH(
 ) {
   const { id } = await params;
 
-  let body: { kaart?: KaartGegevens; methode?: string; bank?: string };
+  let body: { kaart?: KaartGegevens; methode?: "kaart" | "ideal"; bank?: string };
 
   try {
     body = await request.json();
@@ -45,16 +45,20 @@ export async function PATCH(
 
   // iDEAL: alleen de gekozen bank wordt meegestuurd, er zijn geen kaartgegevens.
   if (body.methode === "ideal") {
-    const idealResultaat = paymentStore().betaalMetIdeal(id, String(body.bank ?? ""));
-    if (idealResultaat.fout || !idealResultaat.sessie) {
+    const ideaal = await paymentStore().betaalMetIdeal(
+      id,
+      String(body.bank ?? "")
+    );
+    if (ideaal.fout || !ideaal.sessie) {
       return NextResponse.json(
-        { error: idealResultaat.fout ?? "Betalen mislukt" },
-        { status: idealResultaat.fout === "Deze tafel is al afgerekend." ? 409 : 400 }
+        { error: ideaal.fout ?? "Betalen mislukt" },
+        { status: ideaal.fout === "Deze tafel is al afgerekend." ? 409 : 400 }
       );
     }
+
     return NextResponse.json({
-      sessie: idealResultaat.sessie,
-      bonnetje: bonnetjeVoor(id) ?? null,
+      sessie: ideaal.sessie,
+      bonnetje: bonnetjeVoor(ideaal.sessie) ?? null,
     });
   }
 
@@ -72,7 +76,7 @@ export async function PATCH(
     );
   }
 
-  const resultaat = paymentStore().betaal(id, kaart);
+  const resultaat = await paymentStore().betaal(id, kaart);
   if (resultaat.fout || !resultaat.sessie) {
     return NextResponse.json(
       { error: resultaat.fout ?? "Betalen mislukt" },
@@ -82,6 +86,6 @@ export async function PATCH(
 
   return NextResponse.json({
     sessie: resultaat.sessie,
-    bonnetje: bonnetjeVoor(id) ?? null,
+    bonnetje: bonnetjeVoor(resultaat.sessie) ?? null,
   });
 }

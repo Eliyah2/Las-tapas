@@ -290,11 +290,6 @@ export default function KitchenPage() {
                                           : `Let op · ${item.opmerking}`}
                                       </span>
                                     )}
-                                    {item.allergie && (
-                                      <span className="mt-1 basis-full rounded-lg bg-red-600 px-2 py-1 text-sm font-extrabold uppercase tracking-wide text-white">
-                                        Allergie · {item.allergie}
-                                      </span>
-                                    )}
                                   </li>
                                 ))}
                               </ul>

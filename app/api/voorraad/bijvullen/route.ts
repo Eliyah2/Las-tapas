@@ -21,6 +21,6 @@ export async function POST(request: Request) {
     // Geen body: alles bijvullen.
   }
 
-  const mutaties = voorraadStore().vulAanTotPar(ids, door);
+  const mutaties = await voorraadStore().vulAanTotPar(ids, door);
   return NextResponse.json({ mutaties, aantal: mutaties.length });
 }

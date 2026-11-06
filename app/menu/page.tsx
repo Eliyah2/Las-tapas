@@ -14,7 +14,6 @@ type CartLine = {
   name: string;
   quantity: number;
   voor: string;
-  /** Alles wat de keuken moet weten: allergie, "zonder ui", extra lepeltjes. */
   opmerking: string;
 };
 
@@ -34,7 +33,22 @@ type TafelInfo = {
   namen: string[];
   resterendeMinuten: number | null;
   laatsteRondeMinuten: number;
+  /** Wanneer de eetperiode afloopt; het klokscherm telt hiermee af. */
+  eindeOp: number | null;
 };
+
+/** De opmerking wordt per tafel onthouden, zodat hij maar één keer gezegd hoeft te worden. */
+const opmerkingSleutel = (tafel: string) => `las-tapas:opmerking:${tafel.trim().toLowerCase()}`;
+
+function leesOpmerking(tafel: string): string {
+  if (typeof window === "undefined" || !tafel.trim()) return "";
+  try {
+    return window.localStorage.getItem(opmerkingSleutel(tafel)) ?? "";
+  } catch {
+    // Geen opslag beschikbaar? Dan begint de opmerking gewoon leeg.
+    return "";
+  }
+}
 
 /** Klein lijn-icoon per menucategorie. */
 function CategoryIcon({ id }: { id: string }) {
@@ -122,8 +136,13 @@ export default function MenuPage() {
 function MenuInner() {
   const searchParams = useSearchParams();
   const table = searchParams.get("tafel") ?? "-";
+  // Kijkmodus: de QR op tafel opent de kaart alleen om te lezen. Bestellen
+  // gebeurt op de iPad van de tafel, met een tafelnummer in de link.
+  const kijkModus = searchParams.get("kijken") === "1" || !table.trim() || table === "-";
 
   const [cart, setCart] = useState<Record<string, CartLine>>({});
+  // Eerder gezegde opmerking voor deze tafel staat er meteen weer in.
+  const [note, setNote] = useState(() => leesOpmerking(table));
   const [sending, setSending] = useState(false);
   // De ronde die net verstuurd is; daarna gaat de kaart meteen door naar de volgende.
   const [verstuurd, setVerstuurd] = useState<number | null>(null);
@@ -137,11 +156,13 @@ function MenuInner() {
     string,
     GerechtStatus
   > | null>(null);
+  // Welke categorie staat open? De tabs bovenaan de kaart kiezen dit.
+  const [actieveCategorie, setActieveCategorie] = useState(MENU[0].id);
 
   // Hoeveel personen zitten er, en hoe lang mogen ze nog eten? Elke minuut
   // verversen, zodat de klok op het scherm meeloopt.
   useEffect(() => {
-    if (!table.trim()) return;
+    if (kijkModus || !table.trim()) return;
     let actief = true;
 
     const laad = () =>
@@ -160,6 +181,8 @@ function MenuInner() {
               typeof data.laatsteRondeMinuten === "number"
                 ? data.laatsteRondeMinuten
                 : 30,
+            eindeOp:
+              typeof data.eindeOp === "number" ? data.eindeOp : null,
           });
         })
         .catch(() => {
@@ -220,9 +243,10 @@ function MenuInner() {
       .map((item) => item.name);
   }, [beschikbaar]);
 
-  // Nieuwste regel bovenaan: wat je net aanklikt staat meteen in beeld, zonder
-  // scrollen. De volgorde van een object blijft de volgorde van toevoegen.
-  const cartLines = useMemo(() => Object.values(cart).reverse(), [cart]);
+  const cartLines = useMemo(() => Object.values(cart), [cart]);
+
+  // De nieuwste regel bovenaan: wat je net hebt toegevoegd springt meteen in het oog.
+  const cartWeergave = useMemo(() => [...cartLines].reverse(), [cartLines]);
   const count = cartLines.reduce((sum, l) => sum + l.quantity, 0);
 
   // Is de eetperiode om, of zit de keuken in de laatste ronde?
@@ -319,6 +343,7 @@ function MenuInner() {
             voor: line.voor || undefined,
             opmerking: line.opmerking.trim() || undefined,
           })),
+          note: note || undefined,
         }),
       });
       const data = await res.json();
@@ -335,6 +360,16 @@ function MenuInner() {
           }`
         );
         return;
+      }
+      // De opmerking blijft bewaard voor deze tafel: één keer gezegd is genoeg.
+      try {
+        if (note.trim()) {
+          window.localStorage.setItem(opmerkingSleutel(table), note.trim());
+        } else {
+          window.localStorage.removeItem(opmerkingSleutel(table));
+        }
+      } catch {
+        // Opslag geweigerd? De bestelling is al verstuurd, dus geen probleem.
       }
       setCart({});
       setVerstuurd(typeof data.order?.ronde === "number" ? data.order.ronde : null);
@@ -357,7 +392,7 @@ function MenuInner() {
             </div>
           </div>
           <div className="table-pills">
-            <span className="table-pill">Tafel {table}</span>
+            <span className="table-pill">{kijkModus ? "Menukaart" : "Tafel " + table}</span>
             {tafelInfo && tafelInfo.personen > 0 && (
               <span className="table-pill zacht">
                 {tafelInfo.personen} pers
@@ -374,6 +409,23 @@ function MenuInner() {
             )}
           </div>
         </div>
+        <nav className="menu-tabs" aria-label="Menucategorieën">
+          {MENU.map((categorie) => (
+            <button
+              key={categorie.id}
+              type="button"
+              onClick={() => setActieveCategorie(categorie.id)}
+              className={`menu-tab${
+                actieveCategorie === categorie.id ? " actief" : ""
+              }`}
+              aria-current={
+                actieveCategorie === categorie.id ? "true" : undefined
+              }
+            >
+              {categorie.name}
+            </button>
+          ))}
+        </nav>
       </header>
 
       <div className="menu-hero">
@@ -442,7 +494,8 @@ function MenuInner() {
           </p>
         )}
 
-      {MENU.map((category) => (
+      {MENU.filter((category) => category.id === actieveCategorie).map(
+        (category) => (
         <section key={category.id} className="menu-section">
           <h2 className="category-heading">
             <CategoryIcon id={category.id} />
@@ -484,7 +537,7 @@ function MenuInner() {
                   </div>
                   {isUitverkocht ? (
                     <p className="menu-item-uit">Vandaag op</p>
-                  ) : inCart > 0 ? (
+                  ) : kijkModus ? null : inCart > 0 ? (
                     <div className="quantity-control">
                       <button
                         onClick={() => remove(item.id)}
@@ -523,7 +576,12 @@ function MenuInner() {
       {/* Winkelmand-balk */}
       <div className="cart-bar">
         <div className="cart-inner">
-          {count === 0 ? (
+          {kijkModus ? (
+            <p className="cart-empty">
+              Je bekijkt de menukaart. Bestellen doe je op de iPad van je
+              tafel.
+            </p>
+          ) : count === 0 ? (
             <p className="cart-empty">
               {verstuurd !== null
                 ? `Tik op een gerecht voor ronde ${verstuurd + 1}`
@@ -550,7 +608,7 @@ function MenuInner() {
               )}
 
               <ul className="cart-list">
-                {cartLines.map((line) => (
+                {cartWeergave.map((line) => (
                   <li key={line.sleutel} className="cart-regel">
                     <div className="cart-regel-kop">
                       <span>
@@ -559,8 +617,6 @@ function MenuInner() {
                           <b className="cart-regel-voor"> voor {line.voor}</b>
                         )}
                       </span>
-                      {/* Eén knop voor alles wat de keuken moet weten: een
-                          allergie, "zonder ui" of een extra lepeltje. */}
                       <button
                         type="button"
                         onClick={() =>
@@ -571,7 +627,7 @@ function MenuInner() {
                         className={`cart-notitie-knop${
                           line.opmerking ? " gevuld" : ""
                         }`}
-                        aria-label={`Opmerking of allergie bij ${line.name} voor ${line.voor}`}
+                        aria-label={`Opmerking bij ${line.name} voor ${line.voor}`}
                       >
                         {line.opmerking ? "opmerking" : "+ opmerking"}
                       </button>
@@ -583,7 +639,7 @@ function MenuInner() {
                         onChange={(event) =>
                           zetOpmerking(line.sleutel, event.target.value)
                         }
-                        placeholder="Allergie of wens, bijv. pinda-allergie of zonder ui"
+                        placeholder="Bijv. zonder ui (allergie)"
                         maxLength={80}
                         className="cart-notitie-veld"
                       />
@@ -612,6 +668,12 @@ function MenuInner() {
                   </li>
                 ))}
               </ul>
+              <input
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Opmerking voor de hele tafel (wordt onthouden)"
+                className="order-input"
+              />
               <button
                 onClick={placeOrder}
                 disabled={sending || tijdOm}

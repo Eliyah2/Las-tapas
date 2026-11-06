@@ -40,7 +40,7 @@ export async function POST(
   const store = voorraadStore();
 
   if (body.actie === "goedkeuren") {
-    const uitkomst = store.keurAanvraagGoed(id, body.door);
+    const uitkomst = await store.keurAanvraagGoed(id, body.door);
     if (!uitkomst.ok) {
       return NextResponse.json(
         { error: uitkomst.fout ?? "Goedkeuren mislukt" },
@@ -51,7 +51,7 @@ export async function POST(
   }
 
   if (body.actie === "afwijzen") {
-    const uitkomst = store.wijsAanvraagAf(id, body.door, body.reden);
+    const uitkomst = await store.wijsAanvraagAf(id, body.door, body.reden);
     if (!uitkomst.ok) {
       return NextResponse.json(
         { error: uitkomst.fout ?? "Afwijzen mislukt" },

@@ -44,3 +44,6 @@ next-env.d.ts
 /data/voorraad.json
 
 .vercel
+/freebuff-sites-build/
+/.open-next/
+/.wrangler/

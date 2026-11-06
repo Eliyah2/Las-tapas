@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { paymentStore } from "@/lib/payments";
-import { TARIEF_INFO, tafelStore } from "@/lib/tafel";
+import { ARRANGEMENTEN, arrangementVan, tafelStore } from "@/lib/tafel";
 
 /**
  * Start (of hervat) de afrekening van een tafel.
- * Bij all you can eat is de rekening het aantal personen × het vaste tarief;
- * dat bedrag wordt hier server-side berekend uit de tafelsessie, nooit uit de
- * browser.
+ * All you can eat met arrangementen: het bedrag is het aantal personen × het
+ * tarief van het gekozen arrangement. Dat bedrag wordt hier server-side berekend
+ * uit de tafelsessie, nooit uit de browser.
  */
 export async function POST(request: Request) {
   let body: { table?: string };
@@ -27,10 +27,16 @@ export async function POST(request: Request) {
   if (!tafelSessie) {
     // Geen lopende tafel, maar deze tafel heeft wel al betaald: toon die
     // afrekening (met het bonnetje) in plaats van een foutmelding.
-    const betaald = paymentStore().laatsteVoorTafel(table);
+    const betaald = await paymentStore().laatsteVoorTafel(table);
     if (betaald && betaald.status === "betaald") {
+      const arrangement = arrangementVan(betaald.arrangement);
       return NextResponse.json({
-        ...TARIEF_INFO,
+        arrangementen: ARRANGEMENTEN,
+        arrangement: arrangement.id,
+        arrangementNaam: arrangement.naam,
+        tariefPerPersoon: arrangement.prijsPerPersoon,
+        duurMinuten: arrangement.minuten,
+        laatsteRondeMinuten: arrangement.laatsteRondeMinuten,
         sessie: betaald,
         openSinds: 0,
       });
@@ -44,10 +50,17 @@ export async function POST(request: Request) {
     );
   }
 
-  const sessie = paymentStore().start(table);
+  const arrangement = arrangementVan(tafelSessie.arrangement);
+  const sessie = await paymentStore().start(table);
+
   return NextResponse.json(
     {
-      ...TARIEF_INFO,
+      arrangementen: ARRANGEMENTEN,
+      arrangement: arrangement.id,
+      arrangementNaam: arrangement.naam,
+      tariefPerPersoon: arrangement.prijsPerPersoon,
+      duurMinuten: arrangement.minuten,
+      laatsteRondeMinuten: arrangement.laatsteRondeMinuten,
       sessie,
       openSinds: tafelSessie.gestartOp,
       personen: tafelSessie.personen,

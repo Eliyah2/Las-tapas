@@ -15,7 +15,6 @@ type Item = {
   voor?: string;
   /** Opmerking van de gast, bijvoorbeeld een allergie. */
   opmerking?: string;
-  allergie?: string;
 };
 type Order = {
   id: string;
@@ -31,14 +30,13 @@ const STAPPEN: { status: Status; label: string }[] = [
   { status: "nieuw", label: "Ontvangen" },
   { status: "bereiden", label: "In bereiding" },
   { status: "klaar", label: "Gereed voor uitserveren" },
-  { status: "geserveerd", label: "Geserveerd" },
 ];
 
 const TEKST_PER_STATUS: Record<Status, string> = {
   nieuw: "De keuken heeft je bestelling ontvangen.",
   bereiden: "De kok is aan het koken.",
   klaar: "Gereed voor uitserveren — de bediening komt eraan!",
-  geserveerd: "Geserveerd. Eet smakelijk!",
+  geserveerd: "Geserveerd — smakelijk eten!",
 };
 
 export default function StatusPage() {
@@ -77,6 +75,11 @@ function StatusInner() {
       setOrders(
         lijst
           .filter((o) => o.table.trim().toLowerCase() === tafel)
+          // Voor de gast is een geserveerde bestelling gewoon klaar.
+          .map((o) => ({
+            ...o,
+            status: (o.status === "geserveerd" ? "klaar" : o.status) as Status,
+          }))
           .sort((a, b) => a.createdAt - b.createdAt)
       );
     });
@@ -149,11 +152,6 @@ function StatusInner() {
                           <span className="status-item-voor">{i.voor}</span>
                         )}
                       </span>
-                      {i.allergie && (
-                        <span className="status-item-opmerking">
-                          Allergie: {i.allergie}
-                        </span>
-                      )}
                       {i.opmerking && (
                         <span className="status-item-opmerking">
                           Let op: {i.opmerking}

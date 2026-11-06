@@ -24,7 +24,7 @@ export async function PATCH(
     );
   }
 
-  const order = orderStore().updateStatus(id, status);
+  const order = await orderStore().updateStatus(id, status);
   if (!order) {
     return NextResponse.json({ error: "Bestelling niet gevonden" }, { status: 404 });
   }
