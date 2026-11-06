@@ -59,6 +59,9 @@ function RekeningInner() {
   // Alleen de rondes van deze tafelperiode horen bij deze rekening.
   const [openSinds, setOpenSinds] = useState(0);
   const [tariefPerPersoon, setTariefPerPersoon] = useState<number | null>(null);
+  // Naam van het arrangement (2 uur, 3 uur, met of zonder drinken) voor de
+  // totaalregel; de server bepaalt welk arrangement deze tafel heeft.
+  const [arrangementNaam, setArrangementNaam] = useState("");
   const [orders, setOrders] = useState<Order[]>([]);
   const [fout, setFout] = useState("");
   const [laden, setLaden] = useState(true);
@@ -84,6 +87,9 @@ function RekeningInner() {
           setOpenSinds(typeof data.openSinds === "number" ? data.openSinds : 0);
           if (typeof data.tariefPerPersoon === "number") {
             setTariefPerPersoon(data.tariefPerPersoon);
+          }
+          if (typeof data.arrangementNaam === "string") {
+            setArrangementNaam(data.arrangementNaam);
           }
           setFout("");
         }
@@ -220,7 +226,9 @@ function RekeningInner() {
               <div className="rekening-totaal">
                 <div>
                   <small>
-                    All you can eat · {sessie.personen}{" "}
+                    All you can eat
+                    {arrangementNaam ? ` · ${arrangementNaam}` : ""} ·{" "}
+                    {sessie.personen}{" "}
                     {sessie.personen === 1 ? "persoon" : "personen"}
                     {tariefPerPersoon !== null
                       ? ` × ${formatPrice(tariefPerPersoon)}`

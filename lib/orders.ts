@@ -7,9 +7,10 @@
 //
 // Alle methodes zijn async geworden, want de database is een andere machine.
 
-import { db, dbFout } from "@/lib/supabase";
+import { db, dbFout, supabaseGeconfigureerd } from "@/lib/supabase";
+import { lokaalOrderStore, lokaalOrdersVoorTafel } from "@/lib/orders-lokaal";
 
-export type OrderStatus = "nieuw" | "bereiden" | "klaar";
+export type OrderStatus = "nieuw" | "bereiden" | "klaar" | "geserveerd";
 
 export type OrderItem = {
   id: string;
@@ -118,7 +119,7 @@ function metRonde(rijen: OrderRij[]): Order[] {
  * Alle bestellingen van één tafel, oud naar nieuw. Tafelnummers worden
  * hoofdletterongevoelig vergeleken: "Tafel 5" en "tafel 5" zijn dezelfde tafel.
  */
-export async function ordersVoorTafel(table: string): Promise<Order[]> {
+async function supabaseOrdersVoorTafel(table: string): Promise<Order[]> {
   const { data, error } = await db()
     .from("orders")
     .select(VELDEN)
@@ -141,11 +142,11 @@ async function haalOrder(id: string): Promise<Order | undefined> {
 
   // Voor het rondenummer zijn de andere bestellingen van dezelfde tafel nodig.
   const rij = data as unknown as OrderRij;
-  const vanTafel = await ordersVoorTafel(rij.table_number);
+  const vanTafel = await supabaseOrdersVoorTafel(rij.table_number);
   return vanTafel.find((order) => order.id === id) ?? naarOrder(rij, 1);
 }
 
-export function orderStore() {
+function supabaseOrderStore() {
   return {
     async list(): Promise<Order[]> {
       const { data, error } = await db()
@@ -236,4 +237,22 @@ export function orderStore() {
       return haalOrder(id);
     },
   };
+}
+
+/**
+ * Welke opslag gebruiken we? Staat de database ingesteld, dan Supabase; zo niet,
+ * dan de lijst in het geheugen zodat de bestelflow lokaal blijft werken.
+ */
+export function gebruiktDatabase(): boolean {
+  return supabaseGeconfigureerd();
+}
+
+export async function ordersVoorTafel(table: string): Promise<Order[]> {
+  return gebruiktDatabase()
+    ? supabaseOrdersVoorTafel(table)
+    : lokaalOrdersVoorTafel(table);
+}
+
+export function orderStore() {
+  return gebruiktDatabase() ? supabaseOrderStore() : lokaalOrderStore();
 }

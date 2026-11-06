@@ -1,0 +1,204 @@
+/* Inlogscherm voor de bedrijfsleiding, in dezelfde warme huisstijl als de rest
+   van de site: creme, rojo en amarillo, geen donker beheerscherm. */
+
+.inlog-pagina {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2.5rem 1.25rem;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 10% 6%, rgba(184, 29, 36, 0.1), transparent 28rem),
+    radial-gradient(circle at 90% 94%, rgba(240, 180, 41, 0.2), transparent 26rem),
+    var(--crema);
+}
+
+/* Tegelpatroon als subtiel reliëf, net als de azulejos in de zaak. */
+.inlog-tegel {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(23, 17, 15, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23, 17, 15, 0.045) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(circle at 50% 45%, #000 0%, transparent 78%);
+  -webkit-mask-image: radial-gradient(circle at 50% 45%, #000 0%, transparent 78%);
+  pointer-events: none;
+}
+
+.inlog-kaart {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 29rem;
+  padding: 2.25rem 2rem 1.75rem;
+  border: 1px solid rgba(23, 17, 15, 0.1);
+  border-top: 4px solid var(--rojo);
+  border-radius: 1.15rem;
+  background: var(--blanco);
+  box-shadow: 0 30px 60px -34px rgba(23, 17, 15, 0.5);
+}
+
+.inlog-merk {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 1.6rem;
+}
+
+.inlog-merk-mark {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--amarillo);
+  background: #fdf3dd;
+  color: var(--rojo-oscuro);
+  font-family: var(--font-display-stack);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.inlog-merk-naam {
+  margin: 0;
+  font-family: var(--font-display-stack);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--negro);
+}
+
+.inlog-merk-sub {
+  margin: 0;
+  font-family: var(--font-accent-stack);
+  font-size: 0.85rem;
+  color: var(--gris);
+}
+
+.inlog-eyebrow {
+  margin: 0 0 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--rojo);
+}
+
+.inlog-titel {
+  margin: 0;
+  font-family: var(--font-display-stack);
+  font-size: 1.6rem;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--negro);
+}
+
+.inlog-intro {
+  margin: 0.6rem 0 1.6rem;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--gris);
+}
+
+.inlog-formulier {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.inlog-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gris);
+}
+
+.inlog-input {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(23, 17, 15, 0.18);
+  border-radius: 0.6rem;
+  background: var(--crema);
+  color: var(--negro);
+  font-family: var(--font-display-stack);
+  font-size: 1.35rem;
+  letter-spacing: 0.35em;
+}
+
+.inlog-input:focus {
+  outline: none;
+  border-color: var(--rojo);
+  background: var(--blanco);
+  box-shadow: 0 0 0 3px rgba(184, 29, 36, 0.12);
+}
+
+.inlog-input[aria-invalid="true"] {
+  border-color: var(--rojo);
+}
+
+.inlog-fout {
+  margin: 0.1rem 0 0;
+  padding: 0.5rem 0.7rem;
+  border-radius: 0.5rem;
+  background: rgba(184, 29, 36, 0.08);
+  color: var(--rojo-oscuro);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.inlog-knop {
+  margin-top: 0.45rem;
+  padding: 0.8rem 1rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: var(--negro);
+  color: var(--blanco);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.inlog-knop:hover:not(:disabled) {
+  background: var(--rojo-oscuro);
+}
+
+.inlog-knop:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.inlog-voet {
+  margin: 1.3rem 0 0.35rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--linea);
+  font-size: 0.78rem;
+  color: var(--gris);
+}
+
+.inlog-terug {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--rojo-oscuro);
+  text-decoration: none;
+}
+
+.inlog-terug:hover {
+  color: var(--negro);
+}
+
+@media (max-width: 480px) {
+  .inlog-kaart {
+    padding: 1.75rem 1.35rem 1.4rem;
+  }
+
+  .inlog-titel {
+    font-size: 1.35rem;
+  }
+}

@@ -3492,3 +3492,830 @@ input:focus-visible {
   border-color: var(--amarillo);
   color: var(--amarillo);
 }
+
+/* --- Categorietabs op de menukaart --- */
+.menu-tabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.6rem 1.25rem 0.7rem;
+  background: var(--crema);
+  scrollbar-width: none;
+}
+
+.menu-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.menu-tab {
+  flex: none;
+  padding: 0.5rem 0.95rem;
+  border: 1px solid rgba(23, 17, 15, 0.14);
+  border-radius: 999px;
+  background: var(--blanco);
+  color: var(--negro);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.menu-tab:hover {
+  border-color: var(--rojo);
+}
+
+.menu-tab.actief {
+  border-color: var(--negro);
+  background: var(--negro);
+  color: var(--blanco);
+}
+/* --- Oberdashboard --- */
+.ober-pagina {
+  min-height: 100dvh;
+  padding-bottom: 3rem;
+  background:
+    radial-gradient(circle at 6% 0%, rgba(184, 29, 36, 0.12), transparent 30rem),
+    radial-gradient(circle at 94% 4%, rgba(240, 180, 41, 0.24), transparent 26rem),
+    var(--crema);
+}
+
+.ober-kop {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 3px solid var(--amarillo);
+  background: var(--rojo-oscuro);
+  color: var(--blanco);
+  box-shadow: 0 14px 30px -24px rgba(23, 17, 15, 0.9);
+}
+
+.ober-kop-inner,
+.ober-inhoud {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+.ober-kop-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1.25rem;
+}
+
+.ober-merk {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.ober-merk-mark {
+  display: grid;
+  width: 2.3rem;
+  height: 2.3rem;
+  place-items: center;
+  border: 1px solid var(--amarillo);
+  border-radius: 50%;
+  background: rgba(255, 253, 249, 0.12);
+  color: var(--amarillo);
+  font-family: var(--font-display-stack);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.ober-merk-naam {
+  margin: 0;
+  font-family: var(--font-display-stack);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.ober-merk-sub {
+  margin: 0;
+  color: rgba(255, 253, 249, 0.72);
+  font-family: var(--font-accent-stack);
+  font-size: 0.92rem;
+}
+
+.ober-kop-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.ober-pil {
+  border: 1px solid rgba(255, 253, 249, 0.32);
+  border-radius: 999px;
+  padding: 0.4rem 0.8rem;
+  color: var(--amarillo-licht);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ober-pil.zacht {
+  color: rgba(255, 253, 249, 0.72);
+}
+
+.ober-ververs {
+  padding: 0.42rem 0.8rem;
+  border: 1px solid var(--amarillo);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--amarillo);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ober-ververs:hover {
+  background: rgba(240, 180, 41, 0.15);
+}
+
+.ober-ververs:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ober-inhoud {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  padding: 1.4rem 1.25rem 0;
+}
+
+.ober-fout,
+.ober-melding {
+  margin: 0;
+  padding: 0.7rem 0.95rem;
+  border-left: 3px solid var(--rojo);
+  border-radius: 0.5rem;
+  background: rgba(255, 253, 249, 0.85);
+  color: var(--negro);
+  font-size: 0.85rem;
+}
+
+.ober-melding {
+  border-left-color: var(--amarillo);
+  background: #fdf3dd;
+  color: #7d5608;
+}
+
+.ober-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 0.7rem;
+}
+
+.ober-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(23, 17, 15, 0.09);
+  border-top: 2px solid var(--amarillo);
+  border-radius: 0.75rem;
+  background: var(--blanco);
+  box-shadow: 0 12px 26px -26px rgba(23, 17, 15, 0.8);
+}
+
+.ober-kpi-waarde {
+  color: var(--rojo-oscuro);
+  font-family: var(--font-display-stack);
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.ober-kpi-label {
+  color: var(--gris);
+  font-size: 0.75rem;
+}
+
+.ober-kpi.bedrag .ober-kpi-waarde {
+  font-size: 1.35rem;
+}
+
+.ober-vloer {
+  padding: 1.1rem 1.15rem 1.25rem;
+  border: 1px solid rgba(23, 17, 15, 0.09);
+  border-radius: 1rem;
+  background: rgba(255, 253, 249, 0.72);
+  box-shadow: 0 16px 34px -30px rgba(23, 17, 15, 0.85);
+}
+
+.ober-vloer-kop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid rgba(23, 17, 15, 0.08);
+}
+
+.ober-vloer-kop h2 {
+  margin: 0.15rem 0 0;
+  color: var(--negro);
+  font-family: var(--font-display-stack);
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.ober-vloer-meta {
+  margin: 0;
+  color: var(--gris);
+  font-size: 0.8rem;
+}
+
+.ober-vloer-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--kolommen, 3), minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.ober-tafel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  padding: 0.8rem 0.85rem;
+  border: 1px solid rgba(23, 17, 15, 0.12);
+  border-radius: 0.85rem;
+  background: var(--blanco);
+  color: var(--negro);
+  text-decoration: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.ober-tafel:hover {
+  transform: translateY(-1px);
+  border-color: var(--rojo);
+  box-shadow: 0 16px 30px -26px rgba(23, 17, 15, 0.9);
+}
+
+.ober-tafel-kop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.ober-tafel-nr {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  font-family: var(--font-display-stack);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ober-tafel-label {
+  color: var(--gris);
+  font-family: var(--font-accent-stack);
+  font-size: 0.72rem;
+  font-weight: 400;
+}
+
+.ober-tafel-status {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(23, 17, 15, 0.06);
+  color: var(--gris);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ober-tafel-meta {
+  color: var(--gris);
+  font-size: 0.76rem;
+}
+
+.ober-tafel-info {
+  color: var(--gris);
+  font-size: 0.75rem;
+}
+
+.ober-tafel-voet {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed rgba(23, 17, 15, 0.12);
+  font-size: 0.75rem;
+}
+
+.ober-tafel-voet strong {
+  color: var(--rojo-oscuro);
+  font-family: var(--font-display-stack);
+  font-size: 0.95rem;
+}
+
+/* Bezet: de kleur van de wijnkaart. */
+.ober-tafel.bezet {
+  border-color: rgba(184, 29, 36, 0.45);
+  background: linear-gradient(
+    160deg,
+    rgba(184, 29, 36, 0.09) 0%,
+    rgba(255, 253, 249, 0.96) 65%
+  );
+}
+
+.ober-tafel.bezet .ober-tafel-status {
+  background: var(--rojo);
+  color: var(--blanco);
+}
+
+/* Laatste ronde: goud, net als de rand van de kaart. */
+.ober-tafel.laatste-ronde {
+  border-color: rgba(240, 180, 41, 0.65);
+  background: linear-gradient(
+    160deg,
+    rgba(240, 180, 41, 0.18) 0%,
+    rgba(255, 253, 249, 0.96) 65%
+  );
+}
+
+.ober-tafel.laatste-ronde .ober-tafel-status {
+  background: var(--amarillo);
+  color: #4a3406;
+}
+
+/* Tijd om: donker, zodat het opvalt tussen de rest. */
+.ober-tafel.tijd-om {
+  border-color: var(--negro);
+  background: linear-gradient(
+    160deg,
+    rgba(23, 17, 15, 0.1) 0%,
+    rgba(255, 253, 249, 0.96) 65%
+  );
+}
+
+.ober-tafel.tijd-om .ober-tafel-status {
+  background: var(--negro);
+  color: var(--blanco);
+}
+
+.ober-voetnoot {
+  margin: 0;
+  color: var(--gris);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 780px) {
+  .ober-kop-inner {
+    padding: 0.8rem 1rem;
+  }
+
+  .ober-inhoud {
+    padding: 1rem 1rem 0;
+  }
+
+  .ober-vloer {
+    padding: 0.9rem 0.85rem 1rem;
+  }
+
+  .ober-vloer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .ober-tafel-nr {
+    font-size: 1.3rem;
+  }
+}
+
+/* --- Manageroverzicht --- */
+.mgr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 1rem;
+}
+
+.mgr-kaart {
+  padding: 1.1rem 1.15rem 1.25rem;
+  border: 1px solid rgba(23, 17, 15, 0.09);
+  border-radius: 1rem;
+  background: rgba(255, 253, 249, 0.72);
+  box-shadow: 0 16px 34px -30px rgba(23, 17, 15, 0.85);
+}
+
+.mgr-kaart h2 {
+  margin: 0;
+  color: var(--rojo-oscuro);
+  font-family: var(--font-display-stack);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.mgr-sub {
+  margin: 0.15rem 0 0.9rem;
+  color: var(--gris);
+  font-family: var(--font-accent-stack);
+  font-size: 0.9rem;
+}
+
+.mgr-rij {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 0.3rem 0.75rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px dashed rgba(23, 17, 15, 0.12);
+}
+
+.mgr-rij:last-child {
+  border-bottom: 0;
+}
+
+.mgr-rij-naam {
+  color: var(--negro);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.mgr-rij-waarde {
+  color: var(--rojo-oscuro);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.mgr-balk {
+  grid-column: 1 / -1;
+  height: 0.4rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(23, 17, 15, 0.08);
+}
+
+.mgr-balk span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--rojo), var(--amarillo));
+}
+
+.mgr-status {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.mgr-statusvak {
+  display: flex;
+  flex-direction: column;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(23, 17, 15, 0.09);
+  border-radius: 0.75rem;
+  background: var(--blanco);
+}
+
+.mgr-statuswaarde {
+  color: var(--rojo-oscuro);
+  font-family: var(--font-display-stack);
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.mgr-statuslabel {
+  color: var(--gris);
+  font-size: 0.75rem;
+}
+
+.mgr-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.mgr-link {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid rgba(23, 17, 15, 0.14);
+  border-radius: 999px;
+  background: var(--blanco);
+  color: var(--rojo-oscuro);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.mgr-link:hover {
+  border-color: var(--amarillo);
+  background: #fdf3dd;
+}
+
+.mgr-leeg {
+  display: block;
+  margin: 0.15rem 0 0;
+  color: var(--gris);
+  font-size: 0.8rem;
+}
+
+/* --- Manageroverzicht: eigen beheerscherm met zijbalk links --- */
+.mgr-pagina {
+  display: flex;
+  align-items: flex-start;
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(184, 29, 36, 0.1), transparent 30rem),
+    radial-gradient(circle at 96% 2%, rgba(240, 180, 41, 0.2), transparent 26rem),
+    var(--crema);
+}
+
+.mgr-zij {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  flex: 0 0 15.5rem;
+  height: 100dvh;
+  padding: 1.25rem 1rem 3.4rem;
+  border-top: 3px solid var(--rojo);
+  border-right: 1px solid rgba(23, 17, 15, 0.1);
+  background: rgba(255, 253, 249, 0.94);
+  box-shadow: 22px 0 46px -42px rgba(23, 17, 15, 0.9);
+}
+
+.mgr-zij-merk {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(23, 17, 15, 0.08);
+}
+
+.mgr-zij-mark {
+  display: grid;
+  width: 2.1rem;
+  height: 2.1rem;
+  place-items: center;
+  border: 1px solid var(--amarillo);
+  border-radius: 50%;
+  background: var(--blanco);
+  color: var(--rojo-oscuro);
+  font-family: var(--font-display-stack);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.mgr-zij-naam {
+  margin: 0;
+  color: var(--negro);
+  font-family: var(--font-display-stack);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.mgr-zij-sub {
+  margin: 0;
+  color: var(--gris);
+  font-family: var(--font-accent-stack);
+  font-size: 0.85rem;
+}
+
+.mgr-zij-kop {
+  margin: 0.35rem 0 0;
+  color: var(--rojo);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.mgr-zij-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  overflow-y: auto;
+}
+
+.mgr-zij-link {
+  padding: 0.48rem 0.7rem;
+  border-left: 3px solid transparent;
+  border-radius: 0.5rem;
+  color: var(--negro);
+  font-size: 0.88rem;
+  text-decoration: none;
+}
+
+.mgr-zij-link:hover {
+  background: #fdf3dd;
+  color: var(--rojo-oscuro);
+}
+
+.mgr-zij-link.actief {
+  border-left-color: var(--rojo);
+  background: rgba(184, 29, 36, 0.09);
+  color: var(--rojo-oscuro);
+  font-weight: 700;
+}
+
+.mgr-zij-uit {
+  margin-top: auto;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(23, 17, 15, 0.16);
+  border-radius: 0.6rem;
+  background: var(--blanco);
+  color: var(--rojo-oscuro);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mgr-zij-uit:hover {
+  border-color: var(--rojo);
+  background: var(--rojo-oscuro);
+  color: var(--blanco);
+}
+
+.mgr-inhoud {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 1.35rem;
+  min-width: 0;
+  padding: 1.5rem 1.5rem 3rem;
+}
+
+.mgr-kop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.9rem;
+}
+
+.mgr-oog {
+  margin: 0;
+  color: var(--rojo);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.mgr-titel {
+  margin: 0.1rem 0 0;
+  color: var(--negro);
+  font-family: var(--font-display-stack);
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  font-weight: 600;
+}
+
+.mgr-kop-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.mgr-pil {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid rgba(23, 17, 15, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 253, 249, 0.85);
+  color: var(--rojo-oscuro);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mgr-pil.zacht {
+  color: var(--gris);
+}
+
+.mgr-ververs {
+  padding: 0.42rem 0.85rem;
+  border: 1px solid var(--amarillo);
+  border-radius: 999px;
+  background: var(--blanco);
+  color: #8a5a06;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mgr-ververs:hover {
+  background: #fdf3dd;
+}
+
+.mgr-ververs:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Drie kaarten naast elkaar zodra er ruimte is; de cijfers in het midden. */
+.mgr-grid {
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+}
+
+@media (max-width: 620px) {
+  .mgr-pagina {
+    flex-direction: column;
+  }
+
+  .mgr-zij {
+    position: static;
+    flex: none;
+    width: 100%;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid rgba(23, 17, 15, 0.1);
+    box-shadow: none;
+  }
+
+  .mgr-zij-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .mgr-zij-uit {
+    margin-top: 0.2rem;
+    align-self: flex-start;
+  }
+
+  .mgr-inhoud {
+    padding: 1.2rem 1rem 2.5rem;
+  }
+}
+
+@media (max-width: 1100px) and (min-width: 621px) {
+  .mgr-zij {
+    flex-basis: 12.5rem;
+  }
+}
+
+/* --- Arrangementkeuze op het welkomstscherm ------------------------------ */
+
+.gasten-arrangement-vraag {
+  margin-top: 1.1rem;
+}
+
+.gasten-arrangementen {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.7rem 0 0.4rem;
+}
+
+.gasten-arrangement {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgba(255, 253, 249, 0.28);
+  border-radius: 0.7rem;
+  background: rgba(23, 17, 15, 0.35);
+  color: rgba(255, 253, 249, 0.92);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.gasten-arrangement:hover {
+  border-color: rgba(255, 253, 249, 0.55);
+}
+
+.gasten-arrangement.actief {
+  border-color: var(--amarillo, #e8b53a);
+  background: rgba(232, 181, 58, 0.16);
+}
+
+.gasten-arrangement-naam {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.gasten-arrangement-prijs {
+  color: rgba(255, 253, 249, 0.75);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.gasten-arrangement.actief .gasten-arrangement-prijs {
+  color: rgba(255, 253, 249, 0.95);
+}
+
+.gasten-arrangementen + .gasten-namen-vraag {
+  margin-top: 1rem;
+}

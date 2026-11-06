@@ -9,10 +9,22 @@ const actions = [
     description: "Bestel tapas aan tafel",
   },
   {
+    href: "/ober",
+    icon: "☰",
+    title: "Oberdashboard",
+    description: "Live overzicht van alle tafels",
+  },
+  {
     href: "/keuken",
     icon: "♨",
     title: "Keukenscherm",
     description: "Bekijk live bestellingen",
+  },
+  {
+    href: "/manager",
+    icon: "◆",
+    title: "Manageroverzicht",
+    description: "Alleen voor de bedrijfsleiding · met pincode",
   },
   {
     href: "/voorraad",
@@ -30,7 +42,8 @@ const actions = [
     href: "/qr",
     icon: "▦",
     title: "QR-codes",
-    description: "Maak een code per tafel",
+    description:
+      "Eén code voor de menukaart: gasten kijken alvast, bestellen op de iPad.",
   },
 ];
 

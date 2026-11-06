@@ -6,7 +6,6 @@ import { useSearchParams } from "next/navigation";
 import { MENU } from "@/lib/menu";
 import { Divider } from "@/components/decor";
 import type { GerechtStatus } from "@/lib/voorraad-types";
-import Klok from "./klok";
 
 type CartLine = {
   /** Sleutel van de regel: het gerecht plus de persoon voor wie het is. */
@@ -20,9 +19,6 @@ type CartLine = {
 
 /** Twee gasten kunnen hetzelfde gerecht bestellen: elke regel is uniek per persoon. */
 const lijnSleutel = (id: string, voor: string) => `${id}__${voor}`;
-
-/** Zo lang blijft de kaart nog staan na een bestelling, voordat de klok komt. */
-const KLOK_NA_BESTELLING_MS = 20_000;
 
 /** Resterende tijd leesbaar maken: "1 uur 38 min" of "24 min". */
 function minutenTekst(minuten: number): string {
@@ -140,6 +136,9 @@ export default function MenuPage() {
 function MenuInner() {
   const searchParams = useSearchParams();
   const table = searchParams.get("tafel") ?? "-";
+  // Kijkmodus: de QR op tafel opent de kaart alleen om te lezen. Bestellen
+  // gebeurt op de iPad van de tafel, met een tafelnummer in de link.
+  const kijkModus = searchParams.get("kijken") === "1" || !table.trim() || table === "-";
 
   const [cart, setCart] = useState<Record<string, CartLine>>({});
   // Eerder gezegde opmerking voor deze tafel staat er meteen weer in.
@@ -148,9 +147,6 @@ function MenuInner() {
   // De ronde die net verstuurd is; daarna gaat de kaart meteen door naar de volgende.
   const [verstuurd, setVerstuurd] = useState<number | null>(null);
   const meldingRef = useRef<HTMLDivElement>(null);
-  // Staat het klokscherm in beeld, en de timer die hem aanzet na een bestelling.
-  const [klokZichtbaar, setKlokZichtbaar] = useState(false);
-  const klokTimer = useRef<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tafelInfo, setTafelInfo] = useState<TafelInfo | null>(null);
   // Voor wie is de volgende tik op "+ Toevoegen", en welke notitie staat open?
@@ -160,11 +156,13 @@ function MenuInner() {
     string,
     GerechtStatus
   > | null>(null);
+  // Welke categorie staat open? De tabs bovenaan de kaart kiezen dit.
+  const [actieveCategorie, setActieveCategorie] = useState(MENU[0].id);
 
   // Hoeveel personen zitten er, en hoe lang mogen ze nog eten? Elke minuut
   // verversen, zodat de klok op het scherm meeloopt.
   useEffect(() => {
-    if (!table.trim()) return;
+    if (kijkModus || !table.trim()) return;
     let actief = true;
 
     const laad = () =>
@@ -235,13 +233,6 @@ function MenuInner() {
     meldingRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [verstuurd]);
 
-  // De klok-timer opruimen als de gasten van de kaart weggaan.
-  useEffect(() => {
-    return () => {
-      if (klokTimer.current !== null) window.clearTimeout(klokTimer.current);
-    };
-  }, []);
-
   const uitverkocht = useMemo(() => {
     return MENU.flatMap((category) => category.items)
       .filter((item) => {
@@ -253,6 +244,9 @@ function MenuInner() {
   }, [beschikbaar]);
 
   const cartLines = useMemo(() => Object.values(cart), [cart]);
+
+  // De nieuwste regel bovenaan: wat je net hebt toegevoegd springt meteen in het oog.
+  const cartWeergave = useMemo(() => [...cartLines].reverse(), [cartLines]);
   const count = cartLines.reduce((sum, l) => sum + l.quantity, 0);
 
   // Is de eetperiode om, of zit de keuken in de laatste ronde?
@@ -379,13 +373,6 @@ function MenuInner() {
       }
       setCart({});
       setVerstuurd(typeof data.order?.ronde === "number" ? data.order.ronde : null);
-      // Even later neemt de klok het scherm over: dan zien de gasten hoeveel
-      // tijd ze nog hebben. Een tik brengt ze terug bij de kaart.
-      if (klokTimer.current !== null) window.clearTimeout(klokTimer.current);
-      klokTimer.current = window.setTimeout(
-        () => setKlokZichtbaar(true),
-        KLOK_NA_BESTELLING_MS
-      );
     } catch {
       setError("Geen verbinding met de server.");
     } finally {
@@ -405,7 +392,7 @@ function MenuInner() {
             </div>
           </div>
           <div className="table-pills">
-            <span className="table-pill">Tafel {table}</span>
+            <span className="table-pill">{kijkModus ? "Menukaart" : "Tafel " + table}</span>
             {tafelInfo && tafelInfo.personen > 0 && (
               <span className="table-pill zacht">
                 {tafelInfo.personen} pers
@@ -422,6 +409,23 @@ function MenuInner() {
             )}
           </div>
         </div>
+        <nav className="menu-tabs" aria-label="Menucategorieën">
+          {MENU.map((categorie) => (
+            <button
+              key={categorie.id}
+              type="button"
+              onClick={() => setActieveCategorie(categorie.id)}
+              className={`menu-tab${
+                actieveCategorie === categorie.id ? " actief" : ""
+              }`}
+              aria-current={
+                actieveCategorie === categorie.id ? "true" : undefined
+              }
+            >
+              {categorie.name}
+            </button>
+          ))}
+        </nav>
       </header>
 
       <div className="menu-hero">
@@ -490,7 +494,8 @@ function MenuInner() {
           </p>
         )}
 
-      {MENU.map((category) => (
+      {MENU.filter((category) => category.id === actieveCategorie).map(
+        (category) => (
         <section key={category.id} className="menu-section">
           <h2 className="category-heading">
             <CategoryIcon id={category.id} />
@@ -532,7 +537,7 @@ function MenuInner() {
                   </div>
                   {isUitverkocht ? (
                     <p className="menu-item-uit">Vandaag op</p>
-                  ) : inCart > 0 ? (
+                  ) : kijkModus ? null : inCart > 0 ? (
                     <div className="quantity-control">
                       <button
                         onClick={() => remove(item.id)}
@@ -571,7 +576,12 @@ function MenuInner() {
       {/* Winkelmand-balk */}
       <div className="cart-bar">
         <div className="cart-inner">
-          {count === 0 ? (
+          {kijkModus ? (
+            <p className="cart-empty">
+              Je bekijkt de menukaart. Bestellen doe je op de iPad van je
+              tafel.
+            </p>
+          ) : count === 0 ? (
             <p className="cart-empty">
               {verstuurd !== null
                 ? `Tik op een gerecht voor ronde ${verstuurd + 1}`
@@ -598,7 +608,7 @@ function MenuInner() {
               )}
 
               <ul className="cart-list">
-                {cartLines.map((line) => (
+                {cartWeergave.map((line) => (
                   <li key={line.sleutel} className="cart-regel">
                     <div className="cart-regel-kop">
                       <span>
@@ -680,16 +690,6 @@ function MenuInner() {
           )}
         </div>
       </div>
-
-      {klokZichtbaar && (
-        <Klok
-          tafel={table}
-          eindeOp={tafelInfo?.eindeOp ?? null}
-          resterendeMinuten={tafelInfo?.resterendeMinuten ?? null}
-          laatsteRondeMinuten={tafelInfo?.laatsteRondeMinuten ?? 30}
-          onTerug={() => setKlokZichtbaar(false)}
-        />
-      )}
     </main>
   );
 }

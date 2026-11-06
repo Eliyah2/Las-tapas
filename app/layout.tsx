@@ -35,7 +35,7 @@ const kaushan = Kaushan_Script({
 
 export const metadata: Metadata = {
   title: "Las Tapas · Bestel aan tafel",
-  description: "Bestel aan tafel op de iPad van Las Tapas: onbeperkt tapas, één vast bedrag per persoon.",
+  description: "Bestel aan tafel op de iPad van Las Tapas: onbeperkt tapas, 2 of 3 uur, met of zonder drinken.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

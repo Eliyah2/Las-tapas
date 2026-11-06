@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { orderStore } from "@/lib/orders";
+import { gebruiktDatabase, orderStore } from "@/lib/orders";
 import { findMenuItem } from "@/lib/menu";
 import { voorraadStore } from "@/lib/inventory";
 
@@ -72,28 +72,33 @@ export async function POST(request: Request) {
   // De keuken kan alleen koken wat er in huis is: eerst de recepten afboeken.
   // `verbruik` boekt alles of niets, dus er verdwijnt nooit voorraad zonder order.
   // Registreert de keuken haar uitgiftes zelf, dan wordt er alleen gecontroleerd.
-  const voorraad = voorraadStore();
-  const verbruik = await voorraad.verbruik(
-    orderItems.map((item) => ({ id: item.id, quantity: item.quantity })),
-    table,
-    await voorraad.rekentAutomatischAf()
-  );
+  //
+  // Zonder database is er geen voorraadadministratie om af te boeken. Dan slaan
+  // we deze stap over, zodat de bestelflow lokaal gewoon werkt.
+  let voorraadMutaties = 0;
 
-  if (!verbruik.gelukt) {
-    return NextResponse.json(
-      {
-        error: "Helaas, voor deze bestelling is er net niet genoeg voorraad.",
-        tekorten: verbruik.tekorten,
-      },
-      { status: 409 }
+  if (gebruiktDatabase()) {
+    const voorraad = voorraadStore();
+    const verbruik = await voorraad.verbruik(
+      orderItems.map((item) => ({ id: item.id, quantity: item.quantity })),
+      table,
+      await voorraad.rekentAutomatischAf()
     );
+
+    if (!verbruik.gelukt) {
+      return NextResponse.json(
+        {
+          error: "Helaas, voor deze bestelling is er net niet genoeg voorraad.",
+          tekorten: verbruik.tekorten,
+        },
+        { status: 409 }
+      );
+    }
+    voorraadMutaties = verbruik.mutaties.length;
   }
 
   const store = orderStore();
   const order = await store.add({ table, items: orderItems, note });
 
-  return NextResponse.json(
-    { order, voorraadMutaties: verbruik.mutaties.length },
-    { status: 201 }
-  );
+  return NextResponse.json({ order, voorraadMutaties }, { status: 201 });
 }

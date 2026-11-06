@@ -34,3 +34,21 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Manageroverzicht en inloggen
+
+Het manageroverzicht staat op `/manager` en is alleen voor de bedrijfsleiding.
+Zonder sessie stuurt de pagina je naar `/inloggen`, waar je met een pincode
+inlogt. Na het inloggen blijf je acht uur ingelogd (één dienst); met
+"Uitloggen" in de kop van het overzicht sluit je de sessie weer af.
+
+De standaardpincode is `2468`. Wil je een andere pincode of een eigen
+handtekeningsleutel voor de sessiecookie, zet die dan in `.env.local`:
+
+```bash
+MANAGER_PIN=2468
+SESSIE_GEHEIM=kies-een-eigen-lange-waarde
+```
+
+De pincode wordt nooit naar de browser gestuurd: de controle gebeurt in
+`/api/inloggen`, en de sessiecookie is met HMAC ondertekend en httpOnly.

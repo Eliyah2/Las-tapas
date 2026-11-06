@@ -12,7 +12,8 @@
 // schermen worden via de SSE-routes bijgewerkt door de database te pollen
 // (zie app/api/voorraad/stream/route.ts).
 
-import { db, dbFout } from "@/lib/supabase";
+import { db, dbFout, supabaseGeconfigureerd } from "@/lib/supabase";
+import { lokaleInventoryStore } from "./inventory-lokaal";
 import { RECEPTEN_SEED, VOORRAAD_SEED } from "./voorraad-seed";
 import {
   berekenStatus,
@@ -319,7 +320,7 @@ function maakSlug(naam: string, bestaande: string[]): string {
   return id;
 }
 
-export function voorraadStore() {
+function supabaseInventoryStore() {
   return {
     async overzicht(): Promise<VoorraadOverzicht> {
       const [producten, mutaties, aanvragen, instellingen, mutatiesVandaag] =
@@ -363,6 +364,20 @@ export function voorraadStore() {
 
     /** Beschikbaarheid per gerecht, gebruikt door de menukaart. */
     async beschikbaarheid() {
+      // Zonder database (lokaal zonder .env.local) rekenen we met de
+      // beginvoorraad uit de seed, zodat de menukaart gewoon werkt in plaats
+      // van met een serverfout te blijven hangen. De aantallen worden dan niet
+      // bewaard: daarvoor is Supabase nodig.
+      if (!supabaseGeconfigureerd()) {
+        const status = berekenStatus(RECEPTEN_SEED, VOORRAAD_SEED);
+        return {
+          status,
+          persistent: false,
+          bijgewerkt: Date.now(),
+          samenvatting: maakSamenvatting(VOORRAAD_SEED, [], status),
+        };
+      }
+
       const [producten, mutaties, mutatiesVandaag] = await Promise.all([
         haalProducten(),
         haalMutaties(MAX_MUTATIES_IN_BEELD),
@@ -778,4 +793,21 @@ export function voorraadStore() {
       if (error) throw dbFout("Aanvragen opruimen", error);
     },
   };
+}
+
+type VoorraadOpslag = ReturnType<typeof supabaseInventoryStore>;
+
+/**
+ * De voorraad: uit Supabase als dat is ingesteld, anders uit het geheugen.
+ *
+ * Zonder database (lokaal zonder .env.local) vult lib/inventory-lokaal.ts de
+ * winkel met de beginvoorraad en de recepten uit lib/voorraad-seed.ts. Zo laat
+ * /voorraad zien wat de menukaart nodig heeft in plaats van een leeg scherm,
+ * en werken tellen, leveringen en uitgiftes gewoon; alleen overleeft dat een
+ * herstart van de server niet.
+ */
+export function voorraadStore(): VoorraadOpslag {
+  return supabaseGeconfigureerd()
+    ? supabaseInventoryStore()
+    : lokaleInventoryStore();
 }

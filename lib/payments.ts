@@ -13,8 +13,13 @@
 //    open of betaald. Dat is ook in de database afgedwongen met een unieke
 //    index op (tafelnummer) waar status = 'open' (zie supabase/schema.sql).
 
-import { DUUR_MINUTEN, TARIEF_PER_PERSOON, tafelStore } from "@/lib/tafel";
-import { db, dbFout } from "@/lib/supabase";
+import {
+  arrangementVan,
+  type Arrangement,
+  type ArrangementId,
+  tafelStore,
+} from "@/lib/tafel";
+import { db, dbFout, supabaseGeconfigureerd } from "@/lib/supabase";
 
 /**
  * Gegevens die op het bonnetje horen. Vervang de voorbeeldwaarden door de
@@ -35,6 +40,8 @@ export type BetaalSessie = {
   table: string;
   /** Aantal personen waarop deze rekening is gebaseerd. */
   personen: number;
+  /** Het arrangement waarop deze rekening is gebaseerd. */
+  arrangement?: ArrangementId;
   bedrag: number; // door de server berekend, in euro's
   status: BetaalStatus;
   createdAt: number;
@@ -53,12 +60,13 @@ export type KaartGegevens = {
 const GEWEIGERDE_KAART = "4000000000000002";
 
 const VELDEN =
-  "id, table_number, personen, amount, status, created_at, paid_at, last_four";
+  "id, table_number, personen, arrangement, amount, status, created_at, paid_at, last_four";
 
 type SessieRij = {
   id: string;
   table_number: string;
   personen: number | null;
+  arrangement: string | null;
   amount: number | string;
   status: BetaalStatus;
   created_at: string;
@@ -71,6 +79,7 @@ function naarSessie(rij: SessieRij): BetaalSessie {
     id: rij.id,
     table: rij.table_number,
     personen: Number(rij.personen ?? 0),
+    arrangement: arrangementVan(rij.arrangement).id,
     bedrag: Number(rij.amount),
     status: rij.status,
     createdAt: Date.parse(rij.created_at),
@@ -196,18 +205,23 @@ function afronden(bedrag: number): number {
   return Math.round(bedrag * 100) / 100;
 }
 
-/** De rekening van een tafel: het aantal personen × het vaste tarief. */
+/**
+ * De rekening van een tafel: het aantal personen × het tarief van het gekozen
+ * arrangement. Altijd hier berekend, nooit uit de browser.
+ */
 function rekeningBedrag(
   table: string,
   terugvalPersonen = 0
-): { personen: number; bedrag: number } {
+): { personen: number; bedrag: number; arrangement: Arrangement } {
   const tafelSessie = tafelStore().get(table);
+  const arrangement = arrangementVan(tafelSessie?.arrangement);
   // Loopt de tafel niet meer (server opnieuw gestart, of de gasten zijn al
   // afgerekend), dan houden we het aantal personen van de sessie aan.
   const personen = tafelSessie ? tafelSessie.personen : terugvalPersonen;
   return {
     personen,
-    bedrag: afronden(personen * TARIEF_PER_PERSOON),
+    arrangement,
+    bedrag: afronden(personen * arrangement.prijsPerPersoon),
   };
 }
 
@@ -218,13 +232,36 @@ function rekeningBedrag(
  */
 function bonnetjeVan(sessie: BetaalSessie): Bonnetje {
   const personen = Math.max(sessie.personen, 0);
-  const stukprijs = TARIEF_PER_PERSOON;
+  const arrangement = arrangementVan(sessie.arrangement);
+  const stukprijs = arrangement.prijsPerPersoon;
   const bedrag = afronden(personen * stukprijs);
 
-  // Eten en frisdrank vallen onder het lage tarief. Zit er alcohol in het
-  // arrangement, splits het bedrag dan over 9% en 21% (zie btwTarief per gerecht).
-  const tarief = 0.09;
-  const grondslag = bedrag / (1 + tarief);
+  // Eten valt onder het lage btw-tarief (9%). Zit er drinken bij het arrangement,
+  // dan is de meerprijs ten opzichte van hetzelfde arrangement zonder drinken
+  // het drankdeel: dat valt onder 21%. Zo blijft de bon kloppend.
+  const zonderDrank = arrangementVan("3uur").prijsPerPersoon;
+  const drankDeel = arrangement.drank
+    ? afronden(personen * (stukprijs - zonderDrank))
+    : 0;
+  const etenDeel = afronden(bedrag - drankDeel);
+
+  const etenGrondslag = afronden(etenDeel / 1.09);
+  const btw: BtwRegel[] = [
+    {
+      tarief: 0.09,
+      grondslag: etenGrondslag,
+      btw: afronden(etenDeel - etenGrondslag),
+    },
+  ];
+
+  if (drankDeel > 0) {
+    const drankGrondslag = afronden(drankDeel / 1.21);
+    btw.push({
+      tarief: 0.21,
+      grondslag: drankGrondslag,
+      btw: afronden(drankDeel - drankGrondslag),
+    });
+  }
 
   return {
     nummer: sessie.id.slice(0, 8).toUpperCase(),
@@ -235,23 +272,17 @@ function bonnetjeVan(sessie: BetaalSessie): Bonnetje {
     laatsteVier: sessie.laatsteVier,
     regels: [
       {
-        omschrijving: `All you can eat tapas · ${(DUUR_MINUTEN / 60)
-          .toString()
-          .replace(".", ",")} uur onbeperkt`,
+        omschrijving: `All you can eat tapas · ${arrangement.naam}`,
         aantal: personen,
         stukprijs,
         bedrag,
       },
     ],
-    btw: [
-      {
-        tarief,
-        grondslag: afronden(grondslag),
-        btw: afronden(bedrag - grondslag),
-      },
-    ],
+    btw,
     totaal: bedrag,
-    totaalExclusief: afronden(grondslag),
+    totaalExclusief: afronden(
+      btw.reduce((som, regel) => som + regel.grondslag, 0)
+    ),
   };
 }
 
@@ -261,7 +292,7 @@ export function bonnetjeVoor(sessie: BetaalSessie): Bonnetje | undefined {
   return bonnetjeVan(sessie);
 }
 
-export function paymentStore() {
+function supabasePaymentStore() {
   return {
     async list(): Promise<BetaalSessie[]> {
       const { data, error } = await db()
@@ -291,13 +322,13 @@ export function paymentStore() {
     async start(table: string): Promise<BetaalSessie> {
       const tafel = table.trim();
       const bestaand = await sessieVoorTafel(tafel, true);
-      const { personen, bedrag } = rekeningBedrag(tafel);
+      const { personen, bedrag, arrangement } = rekeningBedrag(tafel);
 
       if (bestaand) {
         // Er kan intussen iemand bijgekomen zijn: het bedrag wordt vers berekend.
         const { data, error } = await db()
           .from("payment_sessions")
-          .update({ amount: bedrag, personen })
+          .update({ amount: bedrag, personen, arrangement: arrangement.id })
           .eq("id", bestaand.id)
           .select(VELDEN)
           .single();
@@ -308,7 +339,13 @@ export function paymentStore() {
 
       const { data, error } = await db()
         .from("payment_sessions")
-        .insert({ table_number: tafel, amount: bedrag, personen, status: "open" })
+        .insert({
+          table_number: tafel,
+          amount: bedrag,
+          personen,
+          arrangement: arrangement.id,
+          status: "open",
+        })
         .select(VELDEN)
         .single();
 
@@ -333,7 +370,7 @@ export function paymentStore() {
       // Bedrag opnieuw berekenen op het moment van betalen: de gast betaalt
       // altijd het tarief voor het aantal personen dat aan tafel zit, nooit een
       // bedrag uit de browser.
-      const { personen, bedrag } = rekeningBedrag(sessie.table, sessie.personen);
+      const { personen, bedrag, arrangement } = rekeningBedrag(sessie.table, sessie.personen);
 
       // De update geldt alleen voor een sessie die nog open is. Twee keer
       // tegelijk op "betalen" drukken levert dus nooit twee betalingen op: de
@@ -343,6 +380,7 @@ export function paymentStore() {
         .update({
           amount: bedrag,
           personen,
+          arrangement: arrangement.id,
           status: "betaald",
           paid_at: new Date().toISOString(),
           last_four: check.laatsteVier,
@@ -361,4 +399,113 @@ export function paymentStore() {
       return { sessie: naarSessie(data as unknown as SessieRij) };
     },
   };
+}
+
+/* ---------------------------------------------------------------------------
+ * Zonder database
+ *
+ * Staat Supabase niet ingesteld, bijvoorbeeld omdat je lokaal test zonder
+ * .env.local, dan werken de betaalsessies uit het geheugen. De handelingen zijn
+ * precies hetzelfde; alleen overleeft een sessie een herstart niet.
+ * ------------------------------------------------------------------------ */
+
+const lokaleSessies: BetaalSessie[] = [];
+let lokaleTeller = 0;
+
+function lokaleSessieVoorTafel(
+  table: string,
+  alleenOpen: boolean
+): BetaalSessie | undefined {
+  const gezocht = table.trim().toLowerCase();
+  return lokaleSessies
+    .filter(
+      (sessie) =>
+        sessie.table.trim().toLowerCase() === gezocht &&
+        (!alleenOpen || sessie.status === "open")
+    )
+    .sort((a, b) => b.createdAt - a.createdAt)[0];
+}
+
+function lokalePaymentStore() {
+  return {
+    async list(): Promise<BetaalSessie[]> {
+      return [...lokaleSessies].sort((a, b) => b.createdAt - a.createdAt);
+    },
+
+    async get(id: string): Promise<BetaalSessie | undefined> {
+      return lokaleSessies.find((sessie) => sessie.id === id);
+    },
+
+    async laatsteVoorTafel(table: string): Promise<BetaalSessie | undefined> {
+      return lokaleSessieVoorTafel(table, false);
+    },
+
+    async openVoorTafel(table: string): Promise<BetaalSessie | undefined> {
+      return lokaleSessieVoorTafel(table, true);
+    },
+
+    /** Start (of hervat) de afrekening van een tafel met een vers bedrag. */
+    async start(table: string): Promise<BetaalSessie> {
+      const tafel = table.trim();
+      const { personen, bedrag, arrangement } = rekeningBedrag(tafel);
+      const bestaand = lokaleSessieVoorTafel(tafel, true);
+
+      if (bestaand) {
+        bestaand.personen = personen;
+        bestaand.bedrag = bedrag;
+        bestaand.arrangement = arrangement.id;
+        return bestaand;
+      }
+
+      lokaleTeller += 1;
+      const sessie: BetaalSessie = {
+        id: `lokaal-${lokaleTeller}`,
+        table: tafel,
+        personen,
+        bedrag,
+        arrangement: arrangement.id,
+        status: "open",
+        createdAt: Date.now(),
+      };
+      lokaleSessies.push(sessie);
+      return sessie;
+    },
+
+    /** Verwerk de betaling van een open sessie. */
+    async betaal(
+      id: string,
+      kaart: KaartGegevens
+    ): Promise<{ sessie?: BetaalSessie; fout?: string }> {
+      const sessie = lokaleSessies.find((rij) => rij.id === id);
+      if (!sessie) return { fout: "Betaalsessie niet gevonden." };
+      if (sessie.status === "betaald") {
+        return { fout: "Deze tafel is al afgerekend." };
+      }
+
+      const check = controleerKaart(kaart);
+      if (!check.gelukt) return { fout: check.fout };
+
+      const { personen, bedrag, arrangement } = rekeningBedrag(
+        sessie.table,
+        sessie.personen
+      );
+
+      sessie.personen = personen;
+      sessie.bedrag = bedrag;
+      sessie.arrangement = arrangement.id;
+      sessie.status = "betaald";
+      sessie.betaaldOp = Date.now();
+      sessie.laatsteVier = check.laatsteVier;
+
+      // De tafel is klaar: de volgende gasten beginnen met een verse periode.
+      tafelStore().stop(sessie.table);
+
+      return { sessie };
+    },
+  };
+}
+
+/** Database als die is ingesteld, anders de sessies uit het geheugen. */
+export function paymentStore() {
+  return supabaseGeconfigureerd() ? supabasePaymentStore() : lokalePaymentStore();
 }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { formatTijdstip } from "@/lib/format";
 
-type Status = "nieuw" | "bereiden" | "klaar";
+type Status = "nieuw" | "bereiden" | "klaar" | "geserveerd";
 type Item = {
   id: string;
   name: string;
@@ -36,6 +36,7 @@ const TEKST_PER_STATUS: Record<Status, string> = {
   nieuw: "De keuken heeft je bestelling ontvangen.",
   bereiden: "De kok is aan het koken.",
   klaar: "Gereed voor uitserveren — de bediening komt eraan!",
+  geserveerd: "Geserveerd — smakelijk eten!",
 };
 
 export default function StatusPage() {
@@ -74,6 +75,11 @@ function StatusInner() {
       setOrders(
         lijst
           .filter((o) => o.table.trim().toLowerCase() === tafel)
+          // Voor de gast is een geserveerde bestelling gewoon klaar.
+          .map((o) => ({
+            ...o,
+            status: (o.status === "geserveerd" ? "klaar" : o.status) as Status,
+          }))
           .sort((a, b) => a.createdAt - b.createdAt)
       );
     });

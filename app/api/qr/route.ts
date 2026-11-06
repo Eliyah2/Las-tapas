@@ -1,11 +1,10 @@
 import QRCode from "qrcode";
 
 export async function GET(request: Request) {
-  const params = new URL(request.url).searchParams;
-  const table = params.get("tafel") ?? "1";
-
   const origin = new URL(request.url).origin;
-  const menuUrl = `${origin}/welkom?tafel=${encodeURIComponent(table)}`;
+  // De QR hoort bij de menukaart: gasten kijken alvast wat er is, bestellen
+  // doen ze daarna op de iPad van de tafel.
+  const menuUrl = `${origin}/menu?kijken=1`;
 
   const png = await QRCode.toBuffer(menuUrl, {
     width: 512,

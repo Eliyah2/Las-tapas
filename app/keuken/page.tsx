@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-type Status = "nieuw" | "bereiden" | "klaar";
+type Status = "nieuw" | "bereiden" | "klaar" | "geserveerd";
 type Item = {
   id: string;
   name: string;
@@ -23,7 +23,7 @@ type Order = {
 const COLUMNS: { status: Status; title: string; dot: string; next: Status; label: string; btn: string }[] = [
   { status: "nieuw", title: "Nieuw", dot: "bg-red-500", next: "bereiden", label: "Start bereiding", btn: "bg-amber-400 text-black" },
   { status: "bereiden", title: "In bereiding", dot: "bg-amber-400", next: "klaar", label: "Gereed voor uitserveren", btn: "bg-emerald-400 text-black" },
-  { status: "klaar", title: "Gereed voor uitserveren", dot: "bg-emerald-400", next: "nieuw", label: "Terug naar nieuw", btn: "ring-1 ring-white/25 text-white/80" },
+  { status: "klaar", title: "Gereed voor uitserveren", dot: "bg-emerald-400", next: "geserveerd", label: "Geserveerd · van het bord", btn: "bg-emerald-400 text-black" },
 ];
 
 const waitColor = (min: number) =>
