@@ -52,6 +52,36 @@ const aantalGerechten = (orders: Order[]) =>
     0
   );
 
+/**
+ * Tafelnummers op volgorde van het getal: 2 staat voor 10. Zo leest de keuken
+ * het scherm van links naar rechts als de tafels in het restaurant.
+ */
+function tafelVolgorde(a: string, b: string): number {
+  const getal = (tafel: string) => {
+    const match = tafel.match(/\d+/);
+    return match ? Number(match[0]) : Number.POSITIVE_INFINITY;
+  };
+  const verschil = getal(a) - getal(b);
+  return verschil !== 0
+    ? verschil
+    : a.localeCompare(b, "nl", { numeric: true });
+}
+
+/** Heeft er iets op deze tafel een allergie-opmerking? Dan valt de tegel op. */
+const heeftAllergie = (orders: Order[]) =>
+  orders.some((order) =>
+    order.items.some((item) => item.opmerking && isAllergie(item.opmerking))
+  );
+
+/** Hoe lang staat deze tegel al te wachten? Bij "gereed" sinds het gereed was. */
+function wachtMinuten(status: OrderStatus, orders: Order[], now: number) {
+  const start =
+    status === "klaar"
+      ? Math.min(...orders.map((order) => order.updatedAt))
+      : orders[0].createdAt;
+  return now ? Math.max(0, Math.floor((now - start) / 60_000)) : 0;
+}
+
 export default function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [connected, setConnected] = useState(false);
@@ -59,7 +89,7 @@ export default function KitchenPage() {
   const [lowStock, setLowStock] = useState(0);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
-  // Welke tegel is opengeklapt: status + tafel, zodat er maar één tegelijk open is.
+  // Welke tegel openstaat in de overlay: status + tafel.
   const [openTegel, setOpenTegel] = useState<string | null>(null);
 
   useEffect(() => {
@@ -108,29 +138,49 @@ export default function KitchenPage() {
     setBusyId(null); // de stream stuurt de nieuwe lijst automatisch mee
   }
 
+  // Per kolom de tegels, op tafelnummer gesorteerd. De volgorde ligt dus vast:
+  // tafel 3 staat altijd op dezelfde plek, ook als er iets bijkomt.
+  const kolommen = KOLOMMEN.map((kol) => ({
+    ...kol,
+    groepen: perTafel(orders.filter((order) => order.status === kol.status))
+      .sort((a, b) => tafelVolgorde(a.tafel, b.tafel)),
+  }));
+
+  const open = openTegel
+    ? kolommen
+        .flatMap((kol) =>
+          kol.groepen.map((groep) => ({
+            kol,
+            groep,
+            sleutel: `${kol.status}:${groep.tafel}`,
+          }))
+        )
+        .find((tegel) => tegel.sleutel === openTegel)
+    : undefined;
+
   return (
-    <main className="keuken-page flex min-h-dvh flex-col bg-[#17110f] text-[#eef0f3]">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-[#f0b429] bg-[#8c1219] px-5 py-3">
-        <h1 className="text-2xl font-extrabold text-white">
+    <main className="keuken-page flex h-dvh flex-col overflow-hidden bg-[#17110f] text-[#eef0f3]">
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b-2 border-[#f0b429] bg-[#8c1219] px-4 py-2">
+        <h1 className="text-xl font-extrabold text-white">
           Las Tapas{" "}
-          <span className="text-base font-medium text-white/70">Keuken</span>
+          <span className="text-sm font-medium text-white/70">Keuken</span>
         </h1>
         <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
           <Link
             href="/serveren"
-            className="rounded-xl px-3 py-2 ring-1 ring-white/15 hover:bg-white/5"
+            className="rounded-xl px-2.5 py-1.5 ring-1 ring-white/15 hover:bg-white/5"
           >
             Serveren
           </Link>
           <Link
             href="/uitgifte"
-            className="rounded-xl px-3 py-2 ring-1 ring-white/15 hover:bg-white/5"
+            className="rounded-xl px-2.5 py-1.5 ring-1 ring-white/15 hover:bg-white/5"
           >
             Pakken
           </Link>
           <Link
             href="/voorraad"
-            className="rounded-xl px-3 py-2 ring-1 ring-white/15 hover:bg-white/5"
+            className="rounded-xl px-2.5 py-1.5 ring-1 ring-white/15 hover:bg-white/5"
           >
             Voorraad
             {lowStock > 0 && (
@@ -141,7 +191,7 @@ export default function KitchenPage() {
           </Link>
           <span
             role="status"
-            className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2"
+            className="flex items-center gap-2 rounded-xl bg-white/5 px-2.5 py-1.5"
           >
             <span
               className={`size-2.5 rounded-full ${
@@ -156,175 +206,196 @@ export default function KitchenPage() {
       {error && (
         <p
           role="alert"
-          className="mx-4 mt-3 rounded-xl bg-red-500/15 px-4 py-2 text-sm text-red-200"
+          className="mx-3 mt-2 shrink-0 rounded-xl bg-red-500/15 px-3 py-1.5 text-sm text-red-200"
         >
           {error}
         </p>
       )}
 
-      {/* Drie kolommen naast elkaar; op een smaller scherm twee, zodat er op
-          een wandscherm meer naast elkaar past en er minder gescrold wordt. */}
-      <div className="grid flex-1 items-start gap-3 p-3 md:grid-cols-2 xl:grid-cols-3">
-        {KOLOMMEN.map((kol) => {
-          const groepen = perTafel(
-            orders.filter((o) => o.status === kol.status)
-          );
-          return (
-            <section key={kol.status} className="rounded-2xl bg-white/[0.03] p-2.5">
-              <h2 className="mb-2 flex items-center justify-between px-1 text-lg font-bold text-white">
-                <span className="flex items-center gap-2">
-                  <i className={`size-2.5 rounded-full ${kol.stip}`} />
-                  {kol.titel}
-                </span>
-                <span className="rounded-full bg-white/10 px-2.5 text-sm tabular-nums">
-                  {groepen.length}
-                </span>
-              </h2>
+      {/* Drie kolommen, elk met kleine tegels per tafel: twee naast elkaar en
+          zoveel rijen als passen. Het geheel vult precies één scherm, dus er
+          hoeft niet gescrold te worden om te zien wat er loopt. */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 p-2 md:grid-cols-3">
+        {kolommen.map((kol) => (
+          <section
+            key={kol.status}
+            className="flex min-h-0 flex-col rounded-2xl bg-white/[0.03] p-2"
+          >
+            <h2 className="mb-1.5 flex shrink-0 items-center justify-between px-1 text-base font-bold text-white">
+              <span className="flex items-center gap-2">
+                <i className={`size-2.5 rounded-full ${kol.stip}`} />
+                {kol.titel}
+              </span>
+              <span className="rounded-full bg-white/10 px-2 text-sm tabular-nums">
+                {kol.groepen.length}
+              </span>
+            </h2>
 
-              <div className="flex flex-col gap-2">
-                {groepen.length === 0 && (
-                  <p className="rounded-xl border border-dashed border-white/15 py-8 text-center text-sm text-white/45">
-                    Geen bestellingen
-                  </p>
-                )}
+            <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-1.5 overflow-y-auto 2xl:grid-cols-3">
+              {kol.groepen.length === 0 && (
+                <p className="col-span-full rounded-xl border border-dashed border-white/15 py-6 text-center text-sm text-white/45">
+                  Geen bestellingen
+                </p>
+              )}
 
-                {groepen.map((groep) => {
-                  const sleutel = `${kol.status}:${groep.tafel}`;
-                  const open = openTegel === sleutel;
-                  // Bij "gereed" telt de tijd sinds het gereed was, anders sinds
-                  // de bestelling binnenkwam. De oudste wacht bovenaan.
-                  const start =
-                    kol.status === "klaar"
-                      ? Math.min(...groep.orders.map((o) => o.updatedAt))
-                      : groep.orders[0].createdAt;
-                  const min = now
-                    ? Math.max(0, Math.floor((now - start) / 60_000))
-                    : 0;
+              {kol.groepen.map((groep) => {
+                const sleutel = `${kol.status}:${groep.tafel}`;
+                const min = wachtMinuten(kol.status, groep.orders, now);
+                const allergie = heeftAllergie(groep.orders);
 
-                  return (
-                    <article
-                      key={sleutel}
-                      className={`overflow-hidden rounded-xl border bg-[#241b18] ${
-                        min >= 15 ? "border-red-500/60" : "border-white/10"
-                      }`}
-                    >
-                      {/* Kleine tegel per tafel: tik om de gerechten te zien. */}
-                      <button
-                        type="button"
-                        onClick={() => setOpenTegel(open ? null : sleutel)}
-                        aria-expanded={open}
-                        className="flex min-h-16 w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-white/[0.04]"
-                      >
-                        <span className="flex items-baseline gap-1.5">
-                          <span className="text-[0.65rem] uppercase tracking-wide text-white/45">
-                            Tafel
-                          </span>
-                          <span className="text-3xl font-extrabold leading-none tabular-nums">
-                            {groep.tafel}
-                          </span>
+                return (
+                  <button
+                    key={sleutel}
+                    type="button"
+                    onClick={() => setOpenTegel(sleutel)}
+                    aria-label={`Tafel ${groep.tafel}, ${aantalGerechten(
+                      groep.orders
+                    )} gerechten, ${
+                      min < 1 ? "net binnen" : `${min} minuten`
+                    }`}
+                    className={`flex min-h-0 flex-col justify-between gap-1 rounded-xl border bg-[#241b18] px-2.5 py-1.5 text-left hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:outline-none ${
+                      min >= 15
+                        ? "border-red-500/60"
+                        : allergie
+                          ? "border-red-400/40"
+                          : "border-white/10"
+                    }`}
+                  >
+                    <span className="flex items-center justify-between gap-1">
+                      <span className="text-[0.6rem] tracking-wide text-white/45 uppercase">
+                        Tafel
+                      </span>
+                      {allergie && (
+                        <span className="rounded bg-red-600 px-1 text-[0.55rem] font-bold tracking-wide uppercase">
+                          Allergie
                         </span>
-                        <span className="flex items-center gap-2.5">
-                          <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-bold tabular-nums">
-                            {aantalGerechten(groep.orders)}×
-                          </span>
-                          <span
-                            className={`text-sm font-bold tabular-nums ${wachtKleur(min)}`}
-                          >
-                            {min < 1 ? "net" : `${min} min`}
-                          </span>
-                          <span className="text-white/35" aria-hidden="true">
-                            {open ? "▴" : "▾"}
-                          </span>
-                        </span>
-                      </button>
-
-                      {open && (
-                        <div className="border-t border-white/10 px-3 pb-2">
-                          {groep.orders.map((order) => (
-                            <div
-                              key={order.id}
-                              className="border-t border-white/[0.07] py-2 first:border-0 first:pt-0"
-                            >
-                              <div className="mb-1 flex items-center justify-between">
-                                <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[0.7rem] font-bold text-amber-300">
-                                  Ronde {order.ronde}
-                                </span>
-                                <span className="text-[0.7rem] text-white/40">
-                                  {order.items.reduce(
-                                    (n, item) => n + item.quantity,
-                                    0
-                                  )}{" "}
-                                  gerechten
-                                </span>
-                              </div>
-
-                              <ul className="space-y-1">
-                                {order.items.map((item) => (
-                                  <li
-                                    key={`${item.id}-${item.voor ?? ""}`}
-                                    className="flex flex-wrap items-baseline gap-x-2"
-                                  >
-                                    <b className="text-base text-amber-400">
-                                      {item.quantity}×
-                                    </b>
-                                    <span className="text-base font-semibold">
-                                      {item.name}
-                                    </span>
-                                    {item.voor && (
-                                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-[0.7rem] font-bold text-white/85">
-                                        {item.voor}
-                                      </span>
-                                    )}
-                                    {/* Eén opmerking per gerecht; een allergie
-                                        valt op zonder dat er een apart veld is. */}
-                                    {item.opmerking && (
-                                      <span
-                                        className={`mt-1 basis-full rounded-lg px-2 py-1 text-sm font-bold ${
-                                          isAllergie(item.opmerking)
-                                            ? "bg-red-600 uppercase tracking-wide text-white"
-                                            : "bg-amber-400/15 text-amber-200"
-                                        }`}
-                                      >
-                                        {isAllergie(item.opmerking)
-                                          ? `Allergie · ${item.opmerking}`
-                                          : `Let op · ${item.opmerking}`}
-                                      </span>
-                                    )}
-                                  </li>
-                                ))}
-                              </ul>
-
-                              {order.note && (
-                                <p className="mt-1.5 rounded-lg bg-amber-400/10 px-2.5 py-1.5 text-sm text-amber-200">
-                                  Tafelnotitie · {order.note}
-                                </p>
-                              )}
-
-                              <button
-                                onClick={() => move(order.id, kol.volgende)}
-                                disabled={busyId === order.id}
-                                className={`mt-2 min-h-12 w-full rounded-lg text-sm font-bold disabled:opacity-50 ${kol.knop}`}
-                              >
-                                {busyId === order.id ? "Bezig…" : kol.actie}
-                              </button>
-                            </div>
-                          ))}
-                        </div>
                       )}
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-          );
-        })}
+                    </span>
+                    <span className="text-3xl leading-none font-extrabold tabular-nums">
+                      {groep.tafel}
+                    </span>
+                    <span className="flex items-center justify-between gap-1 text-xs">
+                      <span className="rounded-full bg-white/10 px-1.5 font-bold tabular-nums">
+                        {aantalGerechten(groep.orders)}×
+                      </span>
+                      <span className={`font-bold tabular-nums ${wachtKleur(min)}`}>
+                        {min < 1 ? "net" : `${min} min`}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ))}
       </div>
 
-      <footer className="border-t border-white/10 px-5 py-2 text-sm text-white/50">
+      <footer className="shrink-0 border-t border-white/10 px-4 py-1.5 text-xs text-white/50">
         Vandaag {orders.length} bestellingen ·{" "}
         {orders.filter((o) => o.status === "geserveerd").length} geserveerd · tik
         op een tafel voor de gerechten
       </footer>
+
+      {/* De gerechten van één tafel openen in een overlay: de indeling erachter
+          blijft staan, dus het scherm verspringt nooit. */}
+      {open && (
+        <div
+          className="fixed inset-0 z-30 flex items-center justify-center bg-black/70 p-3"
+          onClick={() => setOpenTegel(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Tafel ${open.groep.tafel}`}
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[92dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-white/10 bg-[#241b18] p-4 shadow-2xl"
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="flex items-center gap-2 text-2xl font-extrabold text-white">
+                <i className={`size-3 rounded-full ${open.kol.stip}`} />
+                Tafel {open.groep.tafel}
+                <span className="text-sm font-medium text-white/60">
+                  {open.kol.titel}
+                </span>
+              </h2>
+              <button
+                type="button"
+                onClick={() => setOpenTegel(null)}
+                className="rounded-xl px-3 py-2 text-sm font-bold ring-1 ring-white/20 hover:bg-white/5"
+              >
+                Sluiten
+              </button>
+            </div>
+
+            {open.groep.orders.map((order) => (
+              <div
+                key={order.id}
+                className="border-t border-white/10 py-2 first:border-0 first:pt-0"
+              >
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[0.7rem] font-bold text-amber-300">
+                    Ronde {order.ronde}
+                  </span>
+                  <span className="text-[0.7rem] text-white/40">
+                    {order.items.reduce((n, item) => n + item.quantity, 0)}{" "}
+                    gerechten
+                  </span>
+                </div>
+
+                <ul className="space-y-1">
+                  {order.items.map((item) => (
+                    <li
+                      key={`${item.id}-${item.voor ?? ""}`}
+                      className="flex flex-wrap items-baseline gap-x-2"
+                    >
+                      <b className="text-base text-amber-400">
+                        {item.quantity}×
+                      </b>
+                      <span className="text-base font-semibold">
+                        {item.name}
+                      </span>
+                      {item.voor && (
+                        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[0.7rem] font-bold text-white/85">
+                          {item.voor}
+                        </span>
+                      )}
+                      {/* Eén opmerking per gerecht; een allergie valt op
+                          zonder dat er een apart veld is. */}
+                      {item.opmerking && (
+                        <span
+                          className={`mt-1 basis-full rounded-lg px-2 py-1 text-sm font-bold ${
+                            isAllergie(item.opmerking)
+                              ? "bg-red-600 tracking-wide text-white uppercase"
+                              : "bg-amber-400/15 text-amber-200"
+                          }`}
+                        >
+                          {isAllergie(item.opmerking)
+                            ? `Allergie · ${item.opmerking}`
+                            : `Let op · ${item.opmerking}`}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+
+                {order.note && (
+                  <p className="mt-1.5 rounded-lg bg-amber-400/10 px-2.5 py-1.5 text-sm text-amber-200">
+                    Tafelnotitie · {order.note}
+                  </p>
+                )}
+
+                <button
+                  onClick={() => move(order.id, open.kol.volgende)}
+                  disabled={busyId === order.id}
+                  className={`mt-2 min-h-12 w-full rounded-lg text-sm font-bold disabled:opacity-50 ${open.kol.knop}`}
+                >
+                  {busyId === order.id ? "Bezig…" : open.kol.actie}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Na twintig seconden zonder aanraking dimt het scherm; de klok staat
           klein in de hoek. */}
