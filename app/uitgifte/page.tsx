@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { findMenuItem, MENU } from "@/lib/menu";
+import SiteMenu from "@/components/site-menu";
 import { formatAmount, formatPrice, formatTijdstip } from "@/lib/format";
 import { RolKiezer, useRol } from "@/components/rol-kiezer";
 import {
@@ -247,12 +247,12 @@ export default function UitgiftePage() {
             <span className={`connection-dot ${verbonden ? "live" : "offline"}`} />
             {verbonden ? "Live" : "Geen verbinding"}
           </span>
-          <Link href="/keuken" className="mini-button ghost">
-            Bestellingen
-          </Link>
-          <Link href="/" className="mini-button ghost">
-            Home
-          </Link>
+          <SiteMenu
+            items={[
+              { label: "Bestellingen", href: "/keuken" },
+              { label: "Home", href: "/" },
+            ]}
+          />
         </div>
       </header>
 

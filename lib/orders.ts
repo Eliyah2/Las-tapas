@@ -2,7 +2,7 @@
 // Wissel dit later om voor een database (bv. SQLite/Postgres) als je wilt dat
 // orders een server-herstart overleven.
 
-export type OrderStatus = "nieuw" | "bereiden" | "klaar";
+export type OrderStatus = "nieuw" | "bereiden" | "klaar" | "geserveerd";
 
 export type OrderItem = {
   id: string;
@@ -11,8 +11,10 @@ export type OrderItem = {
   quantity: number;
   /** Voor wie het gerecht is: de naam van de gast aan tafel. */
   voor?: string;
-  /** Opmerking per gerecht, bijvoorbeeld "zonder ui (allergie)". */
+  /** Opmerking per gerecht, bijvoorbeeld "zonder ui". */
   opmerking?: string;
+  /** Allergie per gerecht, los van de opmerking. */
+  allergie?: string;
 };
 
 export type Order = {
@@ -83,4 +85,28 @@ export function orderStore() {
       return () => listeners.delete(listener);
     },
   };
+}
+
+/**
+ * Groepeer bestellingen per tafel en zet de tafel met de langst wachtende
+ * bestelling bovenaan. Zo staat wat het eerst klaar moet zijn vooraan, zowel
+ * op het keukenscherm als op het uitserveerscherm van de obers.
+ */
+export function perTafel(lijst: Order[]): { tafel: string; orders: Order[] }[] {
+  const groepen = new Map<string, Order[]>();
+
+  for (const order of lijst) {
+    const bestaand = groepen.get(order.table) ?? [];
+    bestaand.push(order);
+    groepen.set(order.table, bestaand);
+  }
+
+  return [...groepen.entries()]
+    .map(([tafel, orders]) => ({
+      tafel,
+      orders: [...orders].sort((a, b) => a.createdAt - b.createdAt),
+    }))
+    .sort(
+      (a, b) => (a.orders[0]?.createdAt ?? 0) - (b.orders[0]?.createdAt ?? 0)
+    );
 }

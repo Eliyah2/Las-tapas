@@ -26,12 +26,6 @@ const actions = [
     title: "Uitgifte",
     description: "Voor de keuken: pakken wat je nodig hebt",
   },
-  {
-    href: "/qr",
-    icon: "▦",
-    title: "QR-codes",
-    description: "Maak een code per tafel",
-  },
 ];
 
 export default function Home() {

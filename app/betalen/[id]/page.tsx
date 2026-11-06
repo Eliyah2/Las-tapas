@@ -6,6 +6,9 @@ import { useParams } from "next/navigation";
 import { formatPrice, formatTijdstip } from "@/lib/format";
 import { Rosette } from "@/components/decor";
 
+/** Banken voor de iDEAL-simulatie; gelijk aan IDEAL_BANKEN in lib/payments.ts. */
+const BANKEN = ["ING", "ABN AMRO", "Rabobank", "bunq", "SNS", "ASN Bank"];
+
 type Sessie = {
   id: string;
   table: string;
@@ -13,6 +16,8 @@ type Sessie = {
   status: "open" | "betaald";
   laatsteVier?: string;
   betaaldOp?: number;
+  methode?: "kaart" | "ideal";
+  bank?: string;
 };
 
 type Bonregel = {
@@ -41,6 +46,8 @@ type Bonnetje = {
   personen: number;
   betaaldOp?: number;
   laatsteVier?: string;
+  methode?: "kaart" | "ideal";
+  bank?: string;
   regels: Bonregel[];
   btw: BtwRegel[];
   totaal: number;
@@ -81,6 +88,8 @@ export default function BetalenPage() {
   const [verzenden, setVerzenden] = useState(false);
   const [gelukt, setGelukt] = useState(false);
   const [laden, setLaden] = useState(true);
+  const [methode, setMethode] = useState<"kaart" | "ideal">("kaart");
+  const [bank, setBank] = useState(BANKEN[0]);
 
   // Het bedrag komt altijd van de server via de sessie: in de URL staat
   // uitsluitend het sessienummer, dus knutselen aan het bedrag heeft geen effect.
@@ -107,6 +116,32 @@ export default function BetalenPage() {
 
   async function betaal(e: React.FormEvent) {
     e.preventDefault();
+
+    // iDEAL: alleen een bank kiezen, geen kaartgegevens nodig.
+    if (methode === "ideal") {
+      setVerzenden(true);
+      setFout("");
+      try {
+        const res = await fetch(`/api/betalen/${encodeURIComponent(id)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ methode: "ideal", bank }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setFout(data.error ?? "De betaling is mislukt. Probeer het opnieuw.");
+          return;
+        }
+        setSessie(data.sessie);
+        setBon(data.bonnetje ?? null);
+        setGelukt(true);
+      } catch {
+        setFout("Geen verbinding met de server.");
+      } finally {
+        setVerzenden(false);
+      }
+      return;
+    }
 
     // Eerst zelf controleren, zodat de gast meteen ziet wat er mis is in
     // plaats van te wachten op een antwoord van de server.
@@ -242,8 +277,8 @@ export default function BetalenPage() {
                     <span>{formatPrice(bon.totaal)}</span>
                   </div>
                   <div className="bon-rij zacht">
-                    <span>Betaald met kaart</span>
-                    <span>•••• {bon.laatsteVier}</span>
+                    <span>{bon.methode === "ideal" ? `Betaald met iDEAL (${bon.bank})` : "Betaald met kaart"}</span>
+                    {bon.methode !== "ideal" && <span>•••• {bon.laatsteVier}</span>}
                   </div>
                 </div>
 
@@ -253,8 +288,7 @@ export default function BetalenPage() {
               </div>
             ) : (
               <p className="pay-betaald-uitleg">
-                Tafel {sessie.table} is afgerekend met kaart{" "}
-                <b>•••• {sessie.laatsteVier}</b>
+                Tafel {sessie.table} is afgerekend {sessie.methode === "ideal" ? `met iDEAL (${sessie.bank})` : <>met kaart <b>•••• {sessie.laatsteVier}</b></>}
                 {sessie.betaaldOp
                   ? ` om ${formatTijdstip(sessie.betaaldOp)}`
                   : ""}
@@ -298,6 +332,47 @@ export default function BetalenPage() {
             </div>
 
             <form onSubmit={betaal} className="pay-form">
+              <div className="pay-rij" role="radiogroup" aria-label="Betaalmethode">
+                <label className="pay-label">
+                  <input
+                    type="radio"
+                    name="methode"
+                    checked={methode === "kaart"}
+                    onChange={() => setMethode("kaart")}
+                  />{" "}
+                  Kaart
+                </label>
+                <label className="pay-label">
+                  <input
+                    type="radio"
+                    name="methode"
+                    checked={methode === "ideal"}
+                    onChange={() => setMethode("ideal")}
+                  />{" "}
+                  iDEAL
+                </label>
+              </div>
+
+              {methode === "ideal" ? (
+                <>
+                  <label className="pay-label" htmlFor="bank">
+                    Kies je bank
+                  </label>
+                  <select
+                    id="bank"
+                    value={bank}
+                    onChange={(e) => setBank(e.target.value)}
+                    className="pay-input"
+                  >
+                    {BANKEN.map((naam) => (
+                      <option key={naam} value={naam}>
+                        {naam}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              ) : (
+                <>
               <label className="pay-label" htmlFor="kaartnummer">
                 Kaartnummer
               </label>
@@ -326,8 +401,7 @@ export default function BetalenPage() {
                 required
               />
 
-              <div className="pay-rij">
-                <div>
+              <div className="pay-rij">                  <div>
                   <label className="pay-label" htmlFor="vervalt">
                     Vervaldatum
                   </label>
@@ -360,6 +434,8 @@ export default function BetalenPage() {
                   />
                 </div>
               </div>
+                </>
+              )}
 
               {fout && (
                 <p className="order-error" role="alert">
@@ -378,10 +454,9 @@ export default function BetalenPage() {
               </button>
 
               <p className="pay-klein">
-                Demo-omgeving: gebruik testkaart 4242 4242 4242 4242 om te
-                slagen of 4000 0000 0000 0002 om een weigering te zien. Je
-                kaartgegevens worden alleen gecontroleerd en daarna weggegooid —
-                het restaurant slaat ze niet op.
+                {methode === "ideal"
+                  ? "Demo-omgeving: iDEAL is gesimuleerd. Er wordt geen echte bank benaderd en er wordt niets afgeschreven."
+                  : "Demo-omgeving: gebruik testkaart 4242 4242 4242 4242 om te slagen of 4000 0000 0000 0002 om een weigering te zien. Je kaartgegevens worden alleen gecontroleerd en daarna weggegooid — het restaurant slaat ze niet op."}
               </p>
             </form>
           </>

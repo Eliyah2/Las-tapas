@@ -35,12 +35,27 @@ export async function PATCH(
 ) {
   const { id } = await params;
 
-  let body: { kaart?: KaartGegevens };
+  let body: { kaart?: KaartGegevens; methode?: string; bank?: string };
 
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Ongeldige JSON" }, { status: 400 });
+  }
+
+  // iDEAL: alleen de gekozen bank wordt meegestuurd, er zijn geen kaartgegevens.
+  if (body.methode === "ideal") {
+    const idealResultaat = paymentStore().betaalMetIdeal(id, String(body.bank ?? ""));
+    if (idealResultaat.fout || !idealResultaat.sessie) {
+      return NextResponse.json(
+        { error: idealResultaat.fout ?? "Betalen mislukt" },
+        { status: idealResultaat.fout === "Deze tafel is al afgerekend." ? 409 : 400 }
+      );
+    }
+    return NextResponse.json({
+      sessie: idealResultaat.sessie,
+      bonnetje: bonnetjeVoor(id) ?? null,
+    });
   }
 
   const kaart = body.kaart;

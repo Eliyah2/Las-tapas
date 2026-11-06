@@ -116,6 +116,8 @@ export type VoorraadSamenvatting = {
   leeg: number;
   mutatiesVandaag: number;
   uitverkochteGerechten: number;
+  /** Gerechten die nog maakbaar zijn, maar waarvan er nog weinig porties over zijn. */
+  bijnaOpGerechten: number;
 };
 
 export type VoorraadOverzicht = {
@@ -268,6 +270,9 @@ export function ingredientenVanGerecht(
   return kaart;
 }
 
+/** Vanaf zoveel porties of minder geldt een gerecht als bijna op. */
+export const BIJNA_OP_PORTIES = 3;
+
 export function maakSamenvatting(
   producten: Product[],
   mutaties: Movement[],
@@ -284,5 +289,8 @@ export function maakSamenvatting(
     mutatiesVandaag: mutaties.filter((m) => m.createdAt >= beginVandaag).length,
     uitverkochteGerechten: Object.values(status).filter((s) => !s.maakbaar)
       .length,
+    bijnaOpGerechten: Object.values(status).filter(
+      (s) => s.maakbaar && s.porties <= BIJNA_OP_PORTIES
+    ).length,
   };
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { orderStore, type OrderStatus } from "@/lib/orders";
 
-const VALID: OrderStatus[] = ["nieuw", "bereiden", "klaar"];
+const VALID: OrderStatus[] = ["nieuw", "bereiden", "klaar", "geserveerd"];
 
 export async function PATCH(
   request: Request,
@@ -19,7 +19,7 @@ export async function PATCH(
   const status = body.status as OrderStatus;
   if (!VALID.includes(status)) {
     return NextResponse.json(
-      { error: "Status moet één van zijn: nieuw, bereiden, klaar" },
+      { error: "Status moet één van zijn: nieuw, bereiden, klaar, geserveerd" },
       { status: 400 }
     );
   }

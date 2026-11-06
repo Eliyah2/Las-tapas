@@ -37,7 +37,16 @@ export type BetaalSessie = {
   createdAt: number;
   betaaldOp?: number;
   laatsteVier?: string;
+  /** Hoe er betaald is; alleen gevuld na betaling. */
+  methode?: BetaalMethode;
+  /** Gekozen bank bij iDEAL (gesimuleerd). */
+  bank?: string;
 };
+
+export type BetaalMethode = "kaart" | "ideal";
+
+/** Banken voor de iDEAL-simulatie. Er wordt geen echte bank benaderd. */
+export const IDEAL_BANKEN = ["ING", "ABN AMRO", "Rabobank", "bunq", "SNS", "ASN Bank"] as const;
 
 export type KaartGegevens = {
   nummer: string;
@@ -60,6 +69,27 @@ function notify() {
       // listener weggevallen? negeer
     }
   }
+}
+
+/** Zet een sessie op betaald en sluit de tafel af; gedeeld door kaart en iDEAL. */
+function markeerBetaald(
+  sessie: BetaalSessie,
+  extra: Pick<BetaalSessie, "laatsteVier" | "methode" | "bank">
+): void {
+  // Bedrag opnieuw berekenen op het moment van betalen: de gast betaalt
+  // altijd het tarief voor het aantal personen dat aan tafel zit, nooit een
+  // bedrag uit de browser.
+  const { personen, bedrag } = rekeningBedrag(sessie.table);
+  sessie.personen = personen;
+  sessie.bedrag = bedrag;
+  sessie.status = "betaald";
+  sessie.betaaldOp = Date.now();
+  sessie.laatsteVier = extra.laatsteVier;
+  sessie.methode = extra.methode;
+  sessie.bank = extra.bank;
+  // De tafel is klaar: de volgende gasten beginnen met een verse eetperiode.
+  tafelStore().stop(sessie.table);
+  notify();
 }
 
 /** Controleer kaartgegevens zonder ze op te slaan. */
@@ -132,6 +162,8 @@ export type Bonnetje = {
   personen: number;
   betaaldOp?: number;
   laatsteVier?: string;
+  methode?: BetaalMethode;
+  bank?: string;
   regels: Bonregel[];
   btw: BtwRegel[];
   totaal: number; // inclusief btw
@@ -165,6 +197,8 @@ function bonnetjeVan(sessie: BetaalSessie): Bonnetje {
     personen,
     betaaldOp: sessie.betaaldOp,
     laatsteVier: sessie.laatsteVier,
+    methode: sessie.methode,
+    bank: sessie.bank,
     regels: [
       {
         omschrijving: `All you can eat tapas · ${(DUUR_MINUTEN / 60)
@@ -271,18 +305,25 @@ export function paymentStore() {
       const check = controleerKaart(kaart);
       if (!check.gelukt) return { fout: check.fout };
 
-      // Bedrag opnieuw berekenen op het moment van betalen: de gast betaalt
-      // altijd het tarief voor het aantal personen dat aan tafel zit, nooit een
-      // bedrag uit de browser.
-      const { personen, bedrag } = rekeningBedrag(sessie.table);
-      sessie.personen = personen;
-      sessie.bedrag = bedrag;
-      sessie.status = "betaald";
-      sessie.betaaldOp = Date.now();
-      sessie.laatsteVier = check.laatsteVier;
-      // De tafel is klaar: de volgende gasten beginnen met een verse eetperiode.
-      tafelStore().stop(sessie.table);
-      notify();
+      markeerBetaald(sessie, { laatsteVier: check.laatsteVier, methode: "kaart" });
+      return { sessie };
+    },
+
+    /** Simulatie van iDEAL: de gekozen bank wordt gecontroleerd, verder niets. */
+    betaalMetIdeal(
+      id: string,
+      bank: string
+    ): { sessie?: BetaalSessie; fout?: string } {
+      const sessie = sessies.find((s) => s.id === id);
+      if (!sessie) return { fout: "Betaalsessie niet gevonden." };
+      if (sessie.status === "betaald") {
+        return { fout: "Deze tafel is al afgerekend." };
+      }
+      if (!(IDEAL_BANKEN as readonly string[]).includes(bank)) {
+        return { fout: "Kies je bank uit de lijst." };
+      }
+
+      markeerBetaald(sessie, { methode: "ideal", bank });
       return { sessie };
     },
 

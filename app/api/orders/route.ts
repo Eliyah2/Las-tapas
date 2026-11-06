@@ -10,6 +10,8 @@ type IncomingItem = {
   voor?: string;
   /** Opmerking bij dit gerecht, bijvoorbeeld een allergie. */
   opmerking?: string;
+  /** Allergie bij dit gerecht, los van de gewone opmerking. */
+  allergie?: string;
 };
 
 /** Tekst netjes maken: spaties eraf, lengte begrensd, leeg wordt undefined. */
@@ -66,6 +68,7 @@ export async function POST(request: Request) {
       quantity,
       voor: schoonTekst(item.voor, 20),
       opmerking: schoonTekst(item.opmerking, 80),
+      allergie: schoonTekst(item.allergie, 80),
     });
   }
 

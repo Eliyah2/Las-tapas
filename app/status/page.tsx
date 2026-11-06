@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { formatTijdstip } from "@/lib/format";
 
-type Status = "nieuw" | "bereiden" | "klaar";
+type Status = "nieuw" | "bereiden" | "klaar" | "geserveerd";
 type Item = {
   id: string;
   name: string;
@@ -15,6 +15,7 @@ type Item = {
   voor?: string;
   /** Opmerking van de gast, bijvoorbeeld een allergie. */
   opmerking?: string;
+  allergie?: string;
 };
 type Order = {
   id: string;
@@ -30,12 +31,14 @@ const STAPPEN: { status: Status; label: string }[] = [
   { status: "nieuw", label: "Ontvangen" },
   { status: "bereiden", label: "In bereiding" },
   { status: "klaar", label: "Gereed voor uitserveren" },
+  { status: "geserveerd", label: "Geserveerd" },
 ];
 
 const TEKST_PER_STATUS: Record<Status, string> = {
   nieuw: "De keuken heeft je bestelling ontvangen.",
   bereiden: "De kok is aan het koken.",
   klaar: "Gereed voor uitserveren — de bediening komt eraan!",
+  geserveerd: "Geserveerd. Eet smakelijk!",
 };
 
 export default function StatusPage() {
@@ -146,6 +149,11 @@ function StatusInner() {
                           <span className="status-item-voor">{i.voor}</span>
                         )}
                       </span>
+                      {i.allergie && (
+                        <span className="status-item-opmerking">
+                          Allergie: {i.allergie}
+                        </span>
+                      )}
                       {i.opmerking && (
                         <span className="status-item-opmerking">
                           Let op: {i.opmerking}

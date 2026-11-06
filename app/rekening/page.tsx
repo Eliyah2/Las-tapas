@@ -31,6 +31,8 @@ type Sessie = {
   status: "open" | "betaald";
   createdAt: number;
   betaaldOp?: number;
+  methode?: "kaart" | "ideal";
+  bank?: string;
   laatsteVier?: string;
 };
 
@@ -155,8 +157,7 @@ function RekeningInner() {
               <p className="eyebrow">¡Gracias!</p>
               <h1>Deze tafel is afgerekend</h1>
               <p>
-                {formatPrice(sessie.bedrag)} betaald met kaart{" "}
-                <b>•••• {sessie.laatsteVier}</b> om{" "}
+                {formatPrice(sessie.bedrag)} betaald {sessie.methode === "ideal" ? `met iDEAL (${sessie.bank})` : <>met kaart <b>•••• {sessie.laatsteVier}</b></>} om{" "}
                 {sessie.betaaldOp ? formatTijdstip(sessie.betaaldOp) : ""}
                 .
               </p>

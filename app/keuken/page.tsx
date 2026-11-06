@@ -2,32 +2,55 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import IdleScherm from "@/components/idle-scherm";
+import { isAllergie } from "@/lib/opmerking";
+import { perTafel, type Order, type OrderStatus } from "@/lib/orders";
 
-type Status = "nieuw" | "bereiden" | "klaar";
-type Item = {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  /** Naam van de gast voor wie dit gerecht is. */
-  voor?: string;
-  /** Opmerking van de gast, bijvoorbeeld een allergie. */
-  opmerking?: string;
-};
-type Order = {
-  id: string; table: string; ronde: number; items: Item[]; note?: string;
-  status: Status; createdAt: number; updatedAt: number;
-};
-
-// Eén rij per kolom: titel, kleur en de actie die de bestelling naar de volgende status brengt.
-const COLUMNS: { status: Status; title: string; dot: string; next: Status; label: string; btn: string }[] = [
-  { status: "nieuw", title: "Nieuw", dot: "bg-red-500", next: "bereiden", label: "Start bereiding", btn: "bg-amber-400 text-black" },
-  { status: "bereiden", title: "In bereiding", dot: "bg-amber-400", next: "klaar", label: "Gereed voor uitserveren", btn: "bg-emerald-400 text-black" },
-  { status: "klaar", title: "Gereed voor uitserveren", dot: "bg-emerald-400", next: "nieuw", label: "Terug naar nieuw", btn: "ring-1 ring-white/25 text-white/80" },
+// Eén kolom per status. De woorden zijn die van de keuken zelf: ontvangen,
+// in bereiding, gereed.
+const KOLOMMEN: {
+  status: OrderStatus;
+  titel: string;
+  stip: string;
+  volgende: OrderStatus;
+  actie: string;
+  knop: string;
+}[] = [
+  {
+    status: "nieuw",
+    titel: "Ontvangen",
+    stip: "bg-red-500",
+    volgende: "bereiden",
+    actie: "Start bereiding",
+    knop: "bg-amber-400 text-black",
+  },
+  {
+    status: "bereiden",
+    titel: "In bereiding",
+    stip: "bg-amber-400",
+    volgende: "klaar",
+    actie: "Gereed voor uitserveren",
+    knop: "bg-emerald-400 text-black",
+  },
+  {
+    status: "klaar",
+    titel: "Gereed · bij de obers",
+    stip: "bg-emerald-400",
+    volgende: "bereiden",
+    actie: "Terug naar bereiding",
+    knop: "ring-1 ring-white/25 text-white/80",
+  },
 ];
 
-const waitColor = (min: number) =>
-  min >= 15 ? "text-red-400" : min >= 8 ? "text-amber-400" : "text-white/70";
+const wachtKleur = (min: number) =>
+  min >= 15 ? "text-red-400" : min >= 8 ? "text-amber-400" : "text-white/60";
+
+const aantalGerechten = (orders: Order[]) =>
+  orders.reduce(
+    (som, order) =>
+      som + order.items.reduce((n, item) => n + item.quantity, 0),
+    0
+  );
 
 export default function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -36,15 +59,20 @@ export default function KitchenPage() {
   const [lowStock, setLowStock] = useState(0);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  // Welke tegel is opengeklapt: status + tafel, zodat er maar één tegelijk open is.
+  const [openTegel, setOpenTegel] = useState<string | null>(null);
 
   useEffect(() => {
     // Live bestellingen via Server-Sent Events.
     const es = new EventSource("/api/orders/stream");
     es.addEventListener("open", () => setConnected(true));
     es.addEventListener("error", () => setConnected(false));
-    es.addEventListener("orders", (e) => setOrders(JSON.parse((e as MessageEvent).data)));
+    es.addEventListener("orders", (e) =>
+      setOrders(JSON.parse((e as MessageEvent).data))
+    );
 
-    // Voorraadteller en klok, allebei elke minuut.
+    // Voorraadteller en klok, allebei met een ruime interval: het scherm hangt
+    // de hele dag aan de muur en hoeft niet elke seconde te werken.
     const loadStock = () =>
       fetch("/api/voorraad/beschikbaar", { cache: "no-store" })
         .then((r) => r.json())
@@ -53,16 +81,19 @@ export default function KitchenPage() {
     loadStock();
     const timers = [
       window.setInterval(loadStock, 60_000),
-      window.setInterval(() => setNow(Date.now()), 30_000),
+      window.setInterval(() => setNow(Date.now()), 20_000),
       window.setTimeout(() => setNow(Date.now()), 0),
     ];
     return () => {
-      timers.forEach((t) => { clearInterval(t); clearTimeout(t); });
+      timers.forEach((t) => {
+        clearInterval(t);
+        clearTimeout(t);
+      });
       es.close();
     };
   }, []);
 
-  async function move(id: string, status: Status) {
+  async function move(id: string, status: OrderStatus) {
     setBusyId(id);
     setError("");
     const res = await fetch(`/api/orders/${id}/status`, {
@@ -70,79 +101,221 @@ export default function KitchenPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     }).catch(() => null);
-    if (!res?.ok) setError("Status wijzigen mislukt. Controleer de verbinding en probeer opnieuw.");
+    if (!res?.ok)
+      setError(
+        "Status wijzigen mislukt. Controleer de verbinding en probeer opnieuw."
+      );
     setBusyId(null); // de stream stuurt de nieuwe lijst automatisch mee
   }
 
   return (
     <main className="keuken-page flex min-h-dvh flex-col bg-[#17110f] text-[#eef0f3]">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-[#f0b429] bg-[#8c1219] px-6 py-4">
-        <h1 className="text-3xl font-extrabold text-white">Las Tapas <span className="text-lg font-medium text-white/70">Keuken</span></h1>
-        <div className="flex flex-wrap items-center gap-3 text-base font-semibold">
-          <Link href="/uitgifte" className="rounded-xl px-4 py-2.5 ring-1 ring-white/15 hover:bg-white/5">Pakken</Link>
-          <Link href="/voorraad" className="rounded-xl px-4 py-2.5 ring-1 ring-white/15 hover:bg-white/5">
-            Voorraad{lowStock > 0 && <span className="ml-2 rounded-full bg-red-500 px-2 text-sm">{lowStock}</span>}
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-[#f0b429] bg-[#8c1219] px-5 py-3">
+        <h1 className="text-2xl font-extrabold text-white">
+          Las Tapas{" "}
+          <span className="text-base font-medium text-white/70">Keuken</span>
+        </h1>
+        <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+          <Link
+            href="/serveren"
+            className="rounded-xl px-3 py-2 ring-1 ring-white/15 hover:bg-white/5"
+          >
+            Serveren
           </Link>
-          <span role="status" className="flex items-center gap-2 rounded-xl bg-white/5 px-4 py-2.5">
-            <span className={`size-2.5 rounded-full ${connected ? "bg-emerald-400" : "bg-red-500"}`} />
+          <Link
+            href="/uitgifte"
+            className="rounded-xl px-3 py-2 ring-1 ring-white/15 hover:bg-white/5"
+          >
+            Pakken
+          </Link>
+          <Link
+            href="/voorraad"
+            className="rounded-xl px-3 py-2 ring-1 ring-white/15 hover:bg-white/5"
+          >
+            Voorraad
+            {lowStock > 0 && (
+              <span className="ml-2 rounded-full bg-red-500 px-2 text-xs">
+                {lowStock}
+              </span>
+            )}
+          </Link>
+          <span
+            role="status"
+            className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2"
+          >
+            <span
+              className={`size-2.5 rounded-full ${
+                connected ? "bg-emerald-400" : "bg-red-500"
+              }`}
+            />
             {connected ? "Live verbonden" : "Verbinding verbroken"}
           </span>
         </div>
       </header>
 
-      {error && <p role="alert" className="mx-6 mt-4 rounded-xl bg-red-500/15 px-4 py-3 text-red-200">{error}</p>}
+      {error && (
+        <p
+          role="alert"
+          className="mx-4 mt-3 rounded-xl bg-red-500/15 px-4 py-2 text-sm text-red-200"
+        >
+          {error}
+        </p>
+      )}
 
-      <div className="grid flex-1 items-start gap-4 p-4 md:grid-cols-3 md:p-6">
-        {COLUMNS.map((col) => {
-          const list = orders.filter((o) => o.status === col.status).sort((a, b) => a.createdAt - b.createdAt);
+      {/* Drie kolommen naast elkaar; op een smaller scherm twee, zodat er op
+          een wandscherm meer naast elkaar past en er minder gescrold wordt. */}
+      <div className="grid flex-1 items-start gap-3 p-3 md:grid-cols-2 xl:grid-cols-3">
+        {KOLOMMEN.map((kol) => {
+          const groepen = perTafel(
+            orders.filter((o) => o.status === kol.status)
+          );
           return (
-            <section key={col.status} className="rounded-3xl bg-white/[0.03] p-3">
-              <h2 className="mb-3 flex items-center justify-between px-1 text-xl font-bold text-white">
-                <span className="flex items-center gap-3"><i className={`size-3 rounded-full ${col.dot}`} />{col.title}</span>
-                <span className="rounded-full bg-white/10 px-3 text-base tabular-nums">{list.length}</span>
+            <section key={kol.status} className="rounded-2xl bg-white/[0.03] p-2.5">
+              <h2 className="mb-2 flex items-center justify-between px-1 text-lg font-bold text-white">
+                <span className="flex items-center gap-2">
+                  <i className={`size-2.5 rounded-full ${kol.stip}`} />
+                  {kol.titel}
+                </span>
+                <span className="rounded-full bg-white/10 px-2.5 text-sm tabular-nums">
+                  {groepen.length}
+                </span>
               </h2>
-              <div className="flex flex-col gap-4">
-                {list.length === 0 && <p className="rounded-2xl border border-dashed border-white/15 py-10 text-center text-white/50">Geen bestellingen</p>}
-                {list.map((o) => {
-                  // Wachttijd: sinds binnenkomst, of bij "klaar" sinds het klaar is.
-                  const min = now ? Math.floor((now - (o.status === "klaar" ? o.updatedAt : o.createdAt)) / 60_000) : 0;
+
+              <div className="flex flex-col gap-2">
+                {groepen.length === 0 && (
+                  <p className="rounded-xl border border-dashed border-white/15 py-8 text-center text-sm text-white/45">
+                    Geen bestellingen
+                  </p>
+                )}
+
+                {groepen.map((groep) => {
+                  const sleutel = `${kol.status}:${groep.tafel}`;
+                  const open = openTegel === sleutel;
+                  // Bij "gereed" telt de tijd sinds het gereed was, anders sinds
+                  // de bestelling binnenkwam. De oudste wacht bovenaan.
+                  const start =
+                    kol.status === "klaar"
+                      ? Math.min(...groep.orders.map((o) => o.updatedAt))
+                      : groep.orders[0].createdAt;
+                  const min = now
+                    ? Math.max(0, Math.floor((now - start) / 60_000))
+                    : 0;
+
                   return (
-                    <article key={o.id} className={`rounded-2xl border bg-[#241b18] p-5 ${min >= 15 ? "border-red-500/70" : "border-white/10"}`}>
-                      <div className="flex items-start justify-between border-b-2 border-dashed border-white/15 pb-4">
-                        <div>
-                          <p className="text-5xl font-extrabold leading-none tabular-nums"><span className="block text-sm font-medium text-white/50">Tafel</span>{o.table}</p>
-                          <span className="mt-3 inline-block rounded-full bg-amber-400/15 px-3 py-1 text-sm font-bold text-amber-300">Ronde {o.ronde}</span>
-                        </div>
-                        <p className={`text-2xl font-bold tabular-nums ${waitColor(min)}`}>{min < 1 ? "net binnen" : `${min} min`}</p>
-                      </div>
-                      <ul className="mt-4 space-y-3 text-xl">
-                        {o.items.map((i) => (
-                          <li key={`${i.id}-${i.voor ?? ""}`}>
-                            <span>
-                              <b className="mr-2 text-amber-400">{i.quantity}×</b>
-                              {i.name}
-                            </span>
-                            {i.voor && (
-                              <span className="ml-3 align-middle rounded-full bg-white/10 px-3 py-1 text-base font-bold text-white/85">
-                                {i.voor}
-                              </span>
-                            )}
-                            {i.opmerking && (
-                              <span className="mt-2 block rounded-xl bg-red-500/20 px-3 py-2 text-base font-bold text-red-100">
-                                Let op · {i.opmerking}
-                              </span>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                      {o.note && <p className="mt-4 rounded-xl bg-amber-400/10 px-4 py-3 text-amber-200">{o.note}</p>}
+                    <article
+                      key={sleutel}
+                      className={`overflow-hidden rounded-xl border bg-[#241b18] ${
+                        min >= 15 ? "border-red-500/60" : "border-white/10"
+                      }`}
+                    >
+                      {/* Kleine tegel per tafel: tik om de gerechten te zien. */}
                       <button
-                        onClick={() => move(o.id, col.next)}
-                        disabled={busyId === o.id}
-                        className={`mt-5 min-h-14 w-full rounded-xl text-lg font-bold disabled:opacity-50 ${col.btn}`}
+                        type="button"
+                        onClick={() => setOpenTegel(open ? null : sleutel)}
+                        aria-expanded={open}
+                        className="flex min-h-16 w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-white/[0.04]"
                       >
-                        {busyId === o.id ? "Bezig…" : col.label}
+                        <span className="flex items-baseline gap-1.5">
+                          <span className="text-[0.65rem] uppercase tracking-wide text-white/45">
+                            Tafel
+                          </span>
+                          <span className="text-3xl font-extrabold leading-none tabular-nums">
+                            {groep.tafel}
+                          </span>
+                        </span>
+                        <span className="flex items-center gap-2.5">
+                          <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-bold tabular-nums">
+                            {aantalGerechten(groep.orders)}×
+                          </span>
+                          <span
+                            className={`text-sm font-bold tabular-nums ${wachtKleur(min)}`}
+                          >
+                            {min < 1 ? "net" : `${min} min`}
+                          </span>
+                          <span className="text-white/35" aria-hidden="true">
+                            {open ? "▴" : "▾"}
+                          </span>
+                        </span>
                       </button>
+
+                      {open && (
+                        <div className="border-t border-white/10 px-3 pb-2">
+                          {groep.orders.map((order) => (
+                            <div
+                              key={order.id}
+                              className="border-t border-white/[0.07] py-2 first:border-0 first:pt-0"
+                            >
+                              <div className="mb-1 flex items-center justify-between">
+                                <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[0.7rem] font-bold text-amber-300">
+                                  Ronde {order.ronde}
+                                </span>
+                                <span className="text-[0.7rem] text-white/40">
+                                  {order.items.reduce(
+                                    (n, item) => n + item.quantity,
+                                    0
+                                  )}{" "}
+                                  gerechten
+                                </span>
+                              </div>
+
+                              <ul className="space-y-1">
+                                {order.items.map((item) => (
+                                  <li
+                                    key={`${item.id}-${item.voor ?? ""}`}
+                                    className="flex flex-wrap items-baseline gap-x-2"
+                                  >
+                                    <b className="text-base text-amber-400">
+                                      {item.quantity}×
+                                    </b>
+                                    <span className="text-base font-semibold">
+                                      {item.name}
+                                    </span>
+                                    {item.voor && (
+                                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-[0.7rem] font-bold text-white/85">
+                                        {item.voor}
+                                      </span>
+                                    )}
+                                    {/* Eén opmerking per gerecht; een allergie
+                                        valt op zonder dat er een apart veld is. */}
+                                    {item.opmerking && (
+                                      <span
+                                        className={`mt-1 basis-full rounded-lg px-2 py-1 text-sm font-bold ${
+                                          isAllergie(item.opmerking)
+                                            ? "bg-red-600 uppercase tracking-wide text-white"
+                                            : "bg-amber-400/15 text-amber-200"
+                                        }`}
+                                      >
+                                        {isAllergie(item.opmerking)
+                                          ? `Allergie · ${item.opmerking}`
+                                          : `Let op · ${item.opmerking}`}
+                                      </span>
+                                    )}
+                                    {item.allergie && (
+                                      <span className="mt-1 basis-full rounded-lg bg-red-600 px-2 py-1 text-sm font-extrabold uppercase tracking-wide text-white">
+                                        Allergie · {item.allergie}
+                                      </span>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+
+                              {order.note && (
+                                <p className="mt-1.5 rounded-lg bg-amber-400/10 px-2.5 py-1.5 text-sm text-amber-200">
+                                  Tafelnotitie · {order.note}
+                                </p>
+                              )}
+
+                              <button
+                                onClick={() => move(order.id, kol.volgende)}
+                                disabled={busyId === order.id}
+                                className={`mt-2 min-h-12 w-full rounded-lg text-sm font-bold disabled:opacity-50 ${kol.knop}`}
+                              >
+                                {busyId === order.id ? "Bezig…" : kol.actie}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </article>
                   );
                 })}
@@ -152,9 +325,15 @@ export default function KitchenPage() {
         })}
       </div>
 
-      <footer className="border-t border-white/10 px-6 py-3 text-white/60">
-        Vandaag: {orders.length} bestellingen
+      <footer className="border-t border-white/10 px-5 py-2 text-sm text-white/50">
+        Vandaag {orders.length} bestellingen ·{" "}
+        {orders.filter((o) => o.status === "geserveerd").length} geserveerd · tik
+        op een tafel voor de gerechten
       </footer>
+
+      {/* Na twintig seconden zonder aanraking dimt het scherm; de klok staat
+          klein in de hoek. */}
+      <IdleScherm />
     </main>
   );
 }

@@ -173,8 +173,7 @@ input:focus-visible {
 .button,
 .add-button,
 .order-button,
-.welcome-button,
-.qr-download {
+.welcome-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -196,8 +195,7 @@ input:focus-visible {
 .button:hover,
 .add-button:hover,
 .order-button:hover,
-.welcome-button:hover,
-.qr-download:hover {
+.welcome-button:hover {
   border-color: var(--rojo-oscuro);
   background: var(--rojo);
   transform: translateY(-1px);
@@ -207,15 +205,13 @@ input:focus-visible {
 .button:active,
 .add-button:active,
 .order-button:active,
-.welcome-button:active,
-.qr-download:active {
+.welcome-button:active {
   transform: translateY(0);
 }
 
 .button:disabled,
 .add-button:disabled,
-.order-button:disabled,
-.qr-download:disabled {
+.order-button:disabled {
   cursor: not-allowed;
   opacity: 0.6;
   transform: none;
@@ -998,8 +994,12 @@ input:focus-visible {
   backdrop-filter: blur(12px);
 }
 
+/* Compact: de balk staat op een tablet onderaan in beeld en mag daar weinig
+   hoogte innemen, zodat er meer van de kaart zichtbaar blijft. */
 .cart-inner {
-  padding: 0.9rem 1.25rem 1rem;
+  max-width: 86rem;
+  margin: 0 auto;
+  padding: 0.55rem 1rem 0.65rem;
 }
 
 .cart-empty {
@@ -1010,13 +1010,13 @@ input:focus-visible {
 }
 
 .cart-list {
-  max-height: 12rem;
-  margin: 0 0 0.7rem;
+  max-height: 6.5rem;
+  margin: 0 0 0.45rem;
   padding: 0;
   overflow-y: auto;
   list-style: none;
   color: rgba(255, 253, 249, 0.82);
-  font-size: 0.8rem;
+  font-size: 0.76rem;
 }
 
 .cart-list li {
@@ -1026,8 +1026,7 @@ input:focus-visible {
   padding: 0.14rem 0;
 }
 
-.order-input,
-.qr-input {
+.order-input {
   width: 100%;
   border: 1px solid var(--linea);
   border-radius: 0.65rem;
@@ -1036,8 +1035,7 @@ input:focus-visible {
   outline: none;
 }
 
-.order-input:focus,
-.qr-input:focus {
+.order-input:focus {
   border-color: var(--rojo);
   box-shadow: 0 0 0 3px rgba(184, 29, 36, 0.14);
 }
@@ -1492,6 +1490,70 @@ input:focus-visible {
     rgba(140, 18, 25, 0.92),
     rgba(23, 17, 15, 0.55)
   );
+  /* Blijft bovenaan staan: het menu is altijd bereikbaar, ook ver in de lijst. */
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  backdrop-filter: blur(8px);
+}
+
+/* Burgermenu: één knop in de kop, de rest zit in het uitklappaneel. */
+.site-menu {
+  position: relative;
+}
+
+.site-menu-knop {
+  font-family: inherit;
+}
+
+.site-menu-icoon {
+  margin-right: 0.35rem;
+  font-size: 0.9em;
+  line-height: 1;
+}
+
+.site-menu-paneel {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  min-width: 14rem;
+  padding: 0.35rem;
+  border: 1px solid rgba(255, 253, 249, 0.18);
+  border-radius: 0.7rem;
+  background: #1d1614;
+  box-shadow: 0 18px 32px -18px rgba(0, 0, 0, 0.8);
+}
+
+.site-menu-item {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--blanco);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.site-menu-item:hover,
+.site-menu-item:focus-visible {
+  background: rgba(255, 253, 249, 0.09);
+}
+
+.site-menu-item.accent {
+  color: var(--amarillo);
+}
+
+.site-menu-item.actief {
+  background: rgba(240, 180, 41, 0.16);
+  color: var(--amarillo);
 }
 
 .voorraad-title,
@@ -1611,6 +1673,38 @@ input:focus-visible {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.75rem;
   margin-bottom: 1.25rem;
+}
+
+/* De cijfers zitten achter een menuknop: dicht is dicht, ook met display: grid. */
+.kpi-grid.ingeklapt {
+  display: none;
+}
+
+/* Eenmaal uitgeklapt staan de tegels compact, zodat ze weinig ruimte vragen. */
+.kpi-grid.compact {
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.kpi-grid.compact .kpi-card {
+  padding: 0.6rem 0.7rem;
+  border-radius: 0.65rem;
+}
+
+.kpi-grid.compact .kpi-label,
+.kpi-grid.compact .kpi-hint,
+.kpi-grid.compact .kpi-actie {
+  font-size: 0.66rem;
+}
+
+.kpi-grid.compact .kpi-waarde {
+  margin-top: 0.2rem;
+  font-size: 1.3rem;
+}
+
+.kpi-grid.compact .kpi-actie {
+  margin-top: 0.3rem;
 }
 
 .kpi-card {
@@ -2405,96 +2499,6 @@ input:focus-visible {
   font-weight: 700;
   white-space: nowrap;
 }
-
-/* ==========================================================================
-   QR-pagina
-   ========================================================================== */
-
-.qr-page {
-  min-height: 100dvh;
-  padding: 2.5rem 1.25rem;
-}
-
-.qr-card {
-  width: min(580px, 100%);
-  margin: 0 auto;
-  padding: clamp(1.5rem, 5vw, 2.75rem);
-  border: 1px solid var(--linea);
-  border-radius: 1.4rem;
-  background: var(--blanco);
-  box-shadow: var(--schaduw);
-}
-
-.qr-card-header {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  margin-bottom: 1.4rem;
-  padding-bottom: 1.2rem;
-  border-bottom: 1px solid var(--linea);
-}
-
-.qr-card h1 {
-  margin-top: 0.15rem;
-  font-size: clamp(1.7rem, 5vw, 2.3rem);
-  font-weight: 700;
-}
-
-.qr-description {
-  margin-bottom: 1.6rem;
-  color: var(--gris);
-  font-size: 0.9rem;
-  line-height: 1.7;
-}
-
-.qr-label {
-  display: block;
-  margin-bottom: 0.4rem;
-  color: var(--negro);
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
-.qr-input {
-  padding: 0.8rem;
-  font-size: 1rem;
-}
-
-.qr-preview {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: 1.6rem;
-  padding: 1.25rem;
-  border: 1px dashed rgba(184, 29, 36, 0.4);
-  border-radius: 1rem;
-  background: var(--crema);
-}
-
-.qr-image {
-  width: 15rem;
-  height: 15rem;
-  border-radius: 0.5rem;
-}
-
-.qr-table {
-  margin-top: 0.8rem;
-  color: var(--negro);
-  font-family: var(--font-display-stack);
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-.qr-link {
-  margin-top: 0.2rem;
-  color: var(--gris);
-  font-size: 0.72rem;
-}
-
-.qr-download {
-  margin-top: 1.1rem;
-}
-
 /* ==========================================================================
    Responsief
    ========================================================================== */
@@ -3068,7 +3072,6 @@ input:focus-visible {
 .success-page,
 .status-page,
 .rekening-page,
-.qr-page,
 .pay-page {
   background:
     radial-gradient(circle at 12% 0%, rgba(184, 29, 36, 0.18), transparent 32rem),
@@ -3299,7 +3302,7 @@ input:focus-visible {
 
 .cart-list li.cart-regel {
   display: block;
-  padding: 0.45rem 0;
+  padding: 0.3rem 0;
   border-top: 1px dashed rgba(255, 253, 249, 0.14);
 }
 

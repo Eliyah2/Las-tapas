@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { MENU } from "@/lib/menu";
+import SiteMenu from "@/components/site-menu";
 import {
   formatAmount,
   formatDelta,
@@ -73,6 +73,8 @@ export default function VoorraadPage() {
   const [gerecht, setGerecht] = useState("");
   const [alleenAandacht, setAlleenAandacht] = useState(false);
   const [alleenLeeg, setAlleenLeeg] = useState(false);
+  /** De kerncijfers zitten achter een menuknop; standaard ingeklapt. */
+  const [kpiOpen, setKpiOpen] = useState(false);
   const lijstRef = useRef<HTMLElement | null>(null);
 
   const ververs = useCallback(async () => {
@@ -294,20 +296,20 @@ export default function VoorraadPage() {
             />
             {verbonden ? "Live" : "Geen verbinding"}
           </span>
-          <Link href="/keuken" className="mini-button ghost">
-            Keukenscherm
-          </Link>
-          <Link href="/uitgifte" className="mini-button ghost">
-            Uitgiftescherm
-          </Link>
-          {/* Een gewone link, want dit is een download en geen pagina. */}
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a href="/api/voorraad/export" className="mini-button ghost">
-            Export CSV
-          </a>
-          <Link href="/" className="mini-button ghost">
-            Home
-          </Link>
+          <SiteMenu
+            items={[
+              {
+                label: kpiOpen ? "Samenvatting dicht" : "Samenvatting",
+                onClick: () => setKpiOpen((huidig) => !huidig),
+                actief: kpiOpen,
+              },
+              { label: "Keukenscherm", href: "/keuken" },
+              { label: "Uitserveerscherm", href: "/serveren" },
+              { label: "Uitgiftescherm", href: "/uitgifte" },
+              { label: "Export CSV", href: "/api/voorraad/export", extern: true },
+              { label: "Home", href: "/" },
+            ]}
+          />
         </div>
       </header>
 
@@ -321,7 +323,12 @@ export default function VoorraadPage() {
         </p>
       )}
 
-      <section className="kpi-grid" aria-label="Samenvatting">
+      <section
+        id="voorraad-kpi"
+        className={`kpi-grid compact${kpiOpen ? "" : " ingeklapt"}`}
+        aria-label="Samenvatting"
+        hidden={!kpiOpen}
+      >
         <Kpi
           label="Voorraadwaarde"
           waarde={samenvatting ? formatPrice(samenvatting.waarde) : "…"}
@@ -332,6 +339,8 @@ export default function VoorraadPage() {
           waarde={String(samenvatting?.onderPar ?? "…")}
           hint="moet bijbesteld worden"
           toon={samenvatting && samenvatting.onderPar > 0 ? "warn" : "ok"}
+          onClick={() => setAlleenAandacht((huidig) => !huidig)}
+          actief={alleenAandacht}
         />
         <Kpi
           label="Leeg"
@@ -342,11 +351,15 @@ export default function VoorraadPage() {
           actief={alleenLeeg}
         />
         <Kpi
-          label="Uitverkochte gerechten"
-          waarde={String(samenvatting?.uitverkochteGerechten ?? "…")}
-          hint="kunnen nu niet gemaakt worden"
+          label="Gerechten uitverkocht of bijna op"
+          waarde={String(
+            (samenvatting?.uitverkochteGerechten ?? 0) +
+              (samenvatting?.bijnaOpGerechten ?? 0)
+          )}
+          hint="niet te maken of bijna op"
           toon={
-            samenvatting && samenvatting.uitverkochteGerechten > 0
+            samenvatting &&
+            samenvatting.uitverkochteGerechten + samenvatting.bijnaOpGerechten > 0
               ? "alarm"
               : "ok"
           }
